@@ -6,6 +6,21 @@ const COLORS = ['#5865f2', '#eb459e', '#ed4245', '#f0b232', '#23a55a', '#00a8fc'
 
 export const userKey = (username) => `chat:user:${username}`;
 
+// OWNER_USERNAME (env var, set on Render/Vercel) always makes that account the owner,
+// no matter who signed up first. When it's set, nobody else can be owner.
+const OWNER = String(process.env.OWNER_USERNAME || '').trim().toLowerCase().replace(/^@/, '');
+
+export function applyOwner(user) {
+  if (!OWNER || !user) return user;
+  if (user.username === OWNER) { user.role = 'owner'; user.banned = false; }
+  else if (user.role === 'owner') user.role = null;
+  return user;
+}
+
+export function parseUser(raw) {
+  return applyOwner(JSON.parse(raw));
+}
+
 export function cleanUsername(u) {
   const s = String(u || '').trim().toLowerCase();
   return /^[a-z0-9_.]{3,20}$/.test(s) ? s : null;
@@ -43,7 +58,7 @@ export async function getSessionUser(req) {
   if (!username) return null;
   const raw = await cmd('GET', userKey(username));
   if (!raw) return null;
-  return JSON.parse(raw);
+  return parseUser(raw);
 }
 
 export const BANNED_MSG = 'You have been banned from this server.';
@@ -73,7 +88,7 @@ export async function getProfiles(usernames) {
   const out = {};
   raws.forEach((raw, i) => {
     if (!raw) return;
-    try { out[names[i]] = publicUser(JSON.parse(raw)); } catch {}
+    try { out[names[i]] = publicUser(parseUser(raw)); } catch {}
   });
   return out;
 }

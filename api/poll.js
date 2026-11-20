@@ -1,5 +1,5 @@
 import { pipeline, route, cleanChannel, parseList, ONLINE_WINDOW_MS } from './_store.js';
-import { requireUser, userKey, publicUser } from './_auth.js';
+import { requireUser, userKey, publicUser, parseUser } from './_auth.js';
 import { parseChannel, canView, channelInfo, chanKey } from './_channels.js';
 
 // GET /api/poll?channel=general&after=<ts>
@@ -34,7 +34,7 @@ export default route(async (req, res) => {
   const users = {};
   if (wanted.length) {
     const raws = (await pipeline([['MGET', ...wanted.map(userKey)]]))[0];
-    raws.forEach((r, i) => { if (r) try { users[wanted[i]] = publicUser(JSON.parse(r)); } catch {} });
+    raws.forEach((r, i) => { if (r) try { users[wanted[i]] = publicUser(parseUser(r)); } catch {} });
   }
 
   res.status(200).json({

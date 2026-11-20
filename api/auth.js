@@ -1,7 +1,7 @@
 import { cmd, pipeline, route, readBody, cleanDisplayName } from './_store.js';
 import {
   cleanUsername, hashPassword, verifyPassword, randomColor, createSession,
-  getToken, userKey, publicUser, saveUser, BANNED_MSG,
+  getToken, userKey, publicUser, saveUser, BANNED_MSG, parseUser, applyOwner,
 } from './_auth.js';
 
 const MAX_FAILS = 10;           // failed logins per username...
@@ -45,6 +45,7 @@ export default route(async (req, res) => {
     // The very first account on the server becomes the owner.
     const [isFirst] = await pipeline([['SET', 'chat:owner', username, 'NX'], ['RPUSH', 'chat:userlist', username]]);
     if (isFirst) { user.role = 'owner'; await saveUser(user); }
+    applyOwner(user);
     const token = await createSession(username);
     return res.status(200).json({ token, user: publicUser(user) });
   }
@@ -55,7 +56,7 @@ export default route(async (req, res) => {
     if (!username || !password) return res.status(401).json({ error: 'Wrong username or password' });
     const [raw, fails] = await pipeline([['GET', userKey(username)], ['GET', failKey]]);
     if (+fails >= MAX_FAILS) return res.status(429).json({ error: 'Too many attempts. Try again in 15 minutes.' });
-    const user = raw ? JSON.parse(raw) : null;
+    const user = raw ? parseUser(raw) : null;
     if (!user || !verifyPassword(password, user.salt, user.hash)) {
       await pipeline([['INCR', failKey], ['EXPIRE', failKey, FAIL_WINDOW]]);
       return res.status(401).json({ error: 'Wrong username or password' });

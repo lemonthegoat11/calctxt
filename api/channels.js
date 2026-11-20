@@ -1,5 +1,5 @@
 import { cmd, pipeline, route, readBody, cleanChannel, MAX_CHANNELS } from './_store.js';
-import { requireUser, cleanUsername, userKey, publicUser } from './_auth.js';
+import { requireUser, cleanUsername, userKey, publicUser, parseUser } from './_auth.js';
 import { getChannel, saveChannel, canManage, channelInfo, chanKey, MAX_CHANNEL_MEMBERS } from './_channels.js';
 
 // GET  /api/channels -> { users } everyone you can add to a channel
@@ -15,7 +15,7 @@ export default route(async (req, res) => {
   if (req.method === 'GET') {
     const names = [...new Set(await cmd('LRANGE', 'chat:userlist', 0, -1))];
     const raws = names.length ? await cmd('MGET', ...names.map(userKey)) : [];
-    const users = raws.filter(Boolean).map((r) => JSON.parse(r)).filter((u) => !u.banned).map(publicUser);
+    const users = raws.filter(Boolean).map(parseUser).filter((u) => !u.banned).map(publicUser);
     return res.status(200).json({ users });
   }
   if (req.method !== 'POST') return res.status(405).json({ error: 'GET or POST only' });

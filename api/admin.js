@@ -1,5 +1,5 @@
 import { cmd, pipeline, route, readBody } from './_store.js';
-import { requireUser, isStaff, userKey, cleanUsername, publicUser, saveUser } from './_auth.js';
+import { requireUser, isStaff, userKey, cleanUsername, publicUser, saveUser, parseUser } from './_auth.js';
 
 // GET  /api/admin  -> { users: [...], signupsOpen }
 // POST /api/admin  { action: "ban" | "unban" | "promote" | "demote", username }
@@ -19,7 +19,7 @@ export default route(async (req, res) => {
       const username = cleanUsername(b.username);
       const raw = username && (await cmd('GET', userKey(username)));
       if (!raw) return res.status(404).json({ error: 'No such user' });
-      const target = JSON.parse(raw);
+      const target = parseUser(raw);
       if (target.username === me.username) return res.status(400).json({ error: "You can't do that to yourself" });
       if (target.role === 'owner') return res.status(403).json({ error: "The owner can't be changed" });
 
@@ -42,7 +42,7 @@ export default route(async (req, res) => {
   const unique = [...new Set(names)];
   const raws = unique.length ? (await pipeline([['MGET', ...unique.map(userKey)]]))[0] : [];
   const users = raws.filter(Boolean).map((r) => {
-    const u = JSON.parse(r);
+    const u = parseUser(r);
     return { ...publicUser(u), banned: !!u.banned, created: u.created };
   });
   res.status(200).json({ users, signupsOpen: signups !== 'closed' });
