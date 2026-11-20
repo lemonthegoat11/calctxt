@@ -7,14 +7,21 @@ Discord-style group chat.
 photo attachments (button, paste or drag-and-drop), channels, an online list, and live messages.
 
 - **Lock it again:** press **Esc**, or the red lock button at the bottom-left. The chat is wiped from the screen and the calculator comes back. You stay logged in, so next time 111+111 takes you straight back in.
-- **Log out / change password:** click your name at the bottom-left.
+- **Log out / change password / bio:** click your name at the bottom-left.
+- **See someone's profile:** click their name or picture on a message, or in the Online list. It shows their bio and when they joined.
 - The tab title and icon always say "Calculator".
 
 ## Moderation
 
-- **The first account ever made on the server is the owner.** Make yours first right after deploying.
+- **Set yourself as owner:** in Render → your service → **Environment**, add `OWNER_USERNAME` = your username
+  (on Vercel: Settings → Environment Variables, then redeploy). That account is always the owner and can't be banned;
+  nobody else can be owner while it's set. If you don't set it, the first account ever made becomes the owner.
 - The owner and admins get a gold shield button on the left. It opens the **Admin Panel**:
-  - **Ban / Unban** anyone. Banned people are kicked out within seconds and can't log back in.
+  - **Ban / Unban** anyone. Banned people are kicked out within seconds and can't log back in. When you ban, pick:
+    - **Normal ban**: only that account.
+    - **IP + device ban**: also blocks the last 5 IPs and browsers they used, so they can't make new accounts or use
+      other ones from there. Anyone else on that Wi-Fi is blocked too (owner/admins never are). A VPN plus a different
+      browser gets around it; websites can't read real hardware IDs. Unban lifts it.
   - **Make admin / Remove admin** (owner only). Admins can ban regular members; only the owner can ban admins. Nobody can ban the owner.
   - **Allow new sign-ups** switch: turn it off so banned people can't just make a new account.
 - Click someone in the Online list to jump to them in the Admin Panel.

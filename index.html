@@ -167,6 +167,31 @@
   .badge { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: var(--accent); color: #fff; text-transform: uppercase; letter-spacing: .03em; align-self: center; flex-shrink: 0; }
   .badge.owner { background: #f0b232; color: #000; }
   .badge.banned { background: var(--red); }
+  .badge.ipban { background: #7a1f22; }
+  .bio-field { resize: vertical; min-height: 64px; font-family: inherit; line-height: 1.4; }
+  .bio-count { float: right; font-weight: 400; text-transform: none; color: var(--text-dim); }
+  .ucard { padding: 0; overflow: hidden; }
+  .ucard-banner { height: 90px; background: var(--accent); }
+  .ucard-avatar { margin: -46px 0 0 16px; }
+  .ucard-avatar .avatar { border: 6px solid var(--bg-2); box-sizing: content-box; }
+  .ucard-body { padding: 8px 16px 4px; overflow-y: auto; }
+  .ucard-banner, .ucard-avatar { flex-shrink: 0; }
+  .ucard-name { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .ucard-name b { color: var(--text-bright); font-size: 20px; }
+  .ucard-name span { display: flex; gap: 4px; }
+  .ucard-user { color: var(--text-dim); font-size: 14px; margin-bottom: 12px; }
+  .ucard-box { background: var(--bg-1); border-radius: 8px; padding: 12px; font-size: 14px; color: var(--text); }
+  .ucard-box h4 { font-size: 12px; text-transform: uppercase; color: var(--text-bright); margin: 0 0 6px; letter-spacing: .02em; }
+  .ucard-box h4 + div { margin-bottom: 12px; }
+  .ucard-box div:last-child { margin-bottom: 0; }
+  .ucard-bio { white-space: pre-wrap; word-wrap: break-word; }
+  .ucard-bio.empty { color: var(--text-dim); font-style: italic; }
+  .msg .avatar, .msg-user { cursor: pointer; }
+  .msg-user:hover { text-decoration: underline; }
+  .ban-opt { cursor: pointer; margin-bottom: 8px; border: 2px solid transparent; }
+  .ban-opt:has(input:checked) { border-color: var(--red); }
+  .btn.ban-go { background: #da373c; }
+  .btn.ban-go:hover:not(:disabled) { background: #a12828; }
   .msg { position: relative; }
   .msg-del { position: absolute; right: 16px; top: -10px; display: none; background: var(--bg-2); border: 1px solid var(--bg-0); border-radius: 4px; width: 32px; height: 28px; color: var(--text-dim); align-items: center; justify-content: center; z-index: 2; }
   .msg:hover .msg-del { display: flex; }
@@ -352,6 +377,8 @@
       <input type="file" id="pfpFile" accept="image/*" class="hidden">
       <label class="lbl" for="nameInput">Display name</label>
       <input class="field" type="text" id="nameInput" maxlength="32" autocomplete="off" required>
+      <label class="lbl" for="bioInput">About me <span class="bio-count" id="bioCount"></span></label>
+      <textarea class="field bio-field" id="bioInput" maxlength="190" rows="3" placeholder="Write a little about yourself"></textarea>
       <label class="lbl">Name color</label>
       <div class="swatches" id="swatches"></div>
       <details id="pwDetails">
@@ -439,13 +466,57 @@
   </div>
 </div>
 
+<!-- someone's profile card -->
+<div class="modal-wrap hidden" id="cardModal">
+  <div class="modal ucard">
+    <div class="ucard-banner" id="cardBanner"></div>
+    <div class="ucard-avatar"><div class="avatar xl" id="cardAvatar"></div></div>
+    <div class="ucard-body">
+      <div class="ucard-name"><b id="cardName"></b><span id="cardBadges"></span></div>
+      <div class="ucard-user" id="cardUser"></div>
+      <div class="ucard-box">
+        <h4>About me</h4>
+        <div class="ucard-bio" id="cardBio"></div>
+        <h4>Member since</h4>
+        <div id="cardSince"></div>
+      </div>
+      <div class="err" id="cardErr"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost hidden" type="button" id="cardAdmin">Admin Panel</button>
+      <span class="spacer"></span>
+      <button class="btn ghost hidden" type="button" id="cardEdit">Edit profile</button>
+      <button class="btn" type="button" id="cardClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ban type picker -->
+<div class="modal-wrap hidden" id="banModal">
+  <form class="modal" id="banForm">
+    <div class="modal-inner">
+      <h2 id="banTitle">Ban</h2>
+      <p>They get kicked out right away and can't log back in.</p>
+      <label class="toggle-row ban-opt" for="banNormal">
+        <span><b>Normal ban</b><small>Bans this account only.</small></span>
+        <input type="radio" name="banMode" id="banNormal" value="normal" checked>
+      </label>
+      <label class="toggle-row ban-opt" for="banDevice">
+        <span><b>IP + device ban</b><small>Also blocks their network and browser, so they can't make a new account or log in to any other one. Anyone else on the same Wi-Fi gets blocked too (admins are never blocked).</small></span>
+        <input type="radio" name="banMode" id="banDevice" value="device">
+      </label>
+    </div>
+    <div class="modal-foot"><button class="btn ghost" type="button" id="banCancel">Cancel</button><button class="btn ban-go" type="submit">Ban</button></div>
+  </form>
+</div>
+
 <div class="lightbox hidden" id="lightbox"><img id="lightboxImg" alt=""></div>
 
 <script>
 (() => {
   'use strict';
   const $ = (id) => document.getElementById(id);
-  const SECRET = '14789325+33';
+  const SECRET = '111+111';
 
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch { return null; } },
@@ -550,8 +621,19 @@
      ===================================================== */
   let token = store.get('calc.t');
 
+  // Random per-browser ID (localStorage + cookie, each restores the other), used for device bans.
+  const DEVICE = (() => {
+    const ok = (v) => /^[a-f0-9]{32}$/.test(v || '');
+    let d = store.get('calc.d');
+    if (!ok(d)) d = (document.cookie.match(/(?:^|;\s*)calc_d=([a-f0-9]{32})/) || [])[1];
+    if (!ok(d)) d = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+    store.set('calc.d', d);
+    try { document.cookie = `calc_d=${d}; max-age=63072000; path=/; SameSite=Lax`; } catch {}
+    return d;
+  })();
+
   async function api(path, { method = 'GET', body } = {}) {
-    const headers = {};
+    const headers = { 'X-Device': DEVICE };
     if (token) headers.Authorization = 'Bearer ' + token;
     if (body) headers['Content-Type'] = 'application/json';
     let r;
@@ -782,6 +864,13 @@
     if (!me) return;
     draft = { color: me.color, avatar: me.avatar, avatarData: null };
     $('nameInput').value = me.displayName;
+    $('bioInput').value = me.bio || '';
+    bioTouched = false;
+    updateBioCount();
+    // The poll doesn't carry bios, so fetch the current one.
+    api('/api/me').then((d) => {
+      if (!bioTouched) { $('bioInput').value = d.user.bio || ''; updateBioCount(); }
+    }).catch(() => {});
     $('pfpUser').textContent = '@' + me.username;
     $('curPass').value = ''; $('newPass').value = '';
     $('pwDetails').open = false;
@@ -791,6 +880,9 @@
     $('profileModal').classList.remove('hidden');
     closeNav();
   }
+  let bioTouched = false;
+  function updateBioCount() { $('bioCount').textContent = `${$('bioInput').value.length}/190`; }
+  $('bioInput').addEventListener('input', () => { bioTouched = true; updateBioCount(); });
   $('meClick').onclick = openProfile;
   $('editMe').onclick = openProfile;
   $('profileCancel').onclick = () => $('profileModal').classList.add('hidden');
@@ -814,7 +906,7 @@
     try {
       let avatar = draft.avatar;
       if (draft.avatarData) avatar = await uploadImage(draft.avatarData);
-      const body = { displayName: $('nameInput').value, color: draft.color, avatar };
+      const body = { displayName: $('nameInput').value, color: draft.color, avatar, bio: $('bioInput').value };
       if ($('newPass').value) { body.currentPassword = $('curPass').value; body.newPassword = $('newPass').value; }
       me = (await api('/api/me', { method: 'POST', body })).user;
       users[me.username] = me;
@@ -971,6 +1063,7 @@
         setAvatar(row.querySelector('.avatar'), p);
         const u = row.querySelector('.msg-user');
         u.textContent = p.displayName; u.style.color = p.color; u.title = '@' + p.username;
+        u.onclick = row.querySelector('.avatar').onclick = () => openCard(p.username);
         if (p.role) u.after(badgeEl(p.role));
         row.querySelector('.msg-time').textContent = timeStr(m.ts);
       }
@@ -1057,7 +1150,11 @@
       setAvatar(row.querySelector('.avatar'), u);
       row.querySelector('b').textContent = u.displayName;
       if (u.role) row.querySelector('.top').appendChild(badgeEl(u.role));
-      if (u.banned) row.querySelector('.top').appendChild(badgeEl('banned'));
+      if (u.banned) {
+        const bb = badgeEl('banned');
+        if (u.banType === 'device') { bb.className = 'badge ipban'; bb.textContent = 'IP banned'; }
+        row.querySelector('.top').appendChild(bb);
+      }
       row.querySelector('small').textContent = '@' + u.username + (u.username === me.username ? ' (you)' : '');
       const acts = row.querySelector('.acts');
       const btn = (label, cls, fn) => { const b = document.createElement('button'); b.className = 'mini ' + cls; b.textContent = label; b.onclick = fn; acts.appendChild(b); };
@@ -1068,15 +1165,26 @@
       }
       if (canTouch && (u.role !== 'admin' || me.role === 'owner')) {
         if (u.banned) btn('Unban', 'green', () => adminCall({ action: 'unban', username: u.username }));
-        else btn('Ban', 'red', () => {
-          if (confirm(`Ban ${u.displayName} (@${u.username})?\n\nThey get kicked out right away and can't log back in.`)) {
-            adminCall({ action: 'ban', username: u.username });
-          }
-        });
+        else btn('Ban', 'red', () => openBan(u));
       }
       el.appendChild(row);
     }
   }
+
+  let banTarget = null;
+  function openBan(u) {
+    banTarget = u;
+    $('banTitle').textContent = `Ban ${u.displayName} (@${u.username})?`;
+    $('banNormal').checked = true;
+    $('banModal').classList.remove('hidden');
+  }
+  $('banCancel').onclick = () => $('banModal').classList.add('hidden');
+  $('banForm').onsubmit = (e) => {
+    e.preventDefault();
+    $('banModal').classList.add('hidden');
+    const mode = $('banDevice').checked ? 'device' : 'normal';
+    if (banTarget) adminCall({ action: 'ban', username: banTarget.username, mode });
+  };
 
   $('adminBtn').onclick = () => openAdmin();
   $('adminClose').onclick = () => $('adminModal').classList.add('hidden');
@@ -1121,6 +1229,47 @@
     $('chanSettingsBtn').classList.toggle('hidden', !c.canManage);
   }
 
+  /* ---------- profile cards ---------- */
+  let cardFor = null;
+  function fillCard(p) {
+    $('cardBanner').style.background = p.color || 'var(--accent)';
+    setAvatar($('cardAvatar'), p);
+    $('cardName').textContent = p.displayName || p.username;
+    $('cardUser').textContent = '@' + p.username;
+    const badges = $('cardBadges');
+    badges.innerHTML = '';
+    if (p.role) badges.appendChild(badgeEl(p.role));
+    if (p.banned) badges.appendChild(badgeEl('banned'));
+    const bio = $('cardBio');
+    bio.textContent = p.bio === undefined ? 'Loading…' : p.bio || 'No bio yet.';
+    bio.classList.toggle('empty', !p.bio);
+    $('cardSince').textContent = p.created
+      ? new Date(p.created).toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' })
+      : p.bio === undefined ? '…' : 'Unknown';
+    const self = me && p.username === me.username;
+    $('cardEdit').classList.toggle('hidden', !self);
+    $('cardAdmin').classList.toggle('hidden', self || !isStaff(me));
+  }
+  async function openCard(username) {
+    if (!username) return;
+    cardFor = username;
+    $('cardErr').textContent = '';
+    const known = users[username] || { username, displayName: username };
+    fillCard({ ...known, bio: undefined });
+    $('cardModal').classList.remove('hidden');
+    try {
+      const { user } = await api('/api/me?u=' + encodeURIComponent(username));
+      if (cardFor === username) fillCard(user);
+    } catch (err) {
+      if (cardFor === username) { $('cardErr').textContent = err.message; $('cardBio').textContent = ''; $('cardSince').textContent = ''; }
+    }
+  }
+  const closeCard = () => { $('cardModal').classList.add('hidden'); cardFor = null; };
+  $('cardClose').onclick = closeCard;
+  $('cardModal').addEventListener('click', (e) => { if (e.target === $('cardModal')) closeCard(); });
+  $('cardEdit').onclick = () => { closeCard(); openProfile(); };
+  $('cardAdmin').onclick = () => { const u = cardFor; closeCard(); openAdmin(u); };
+
   function renderMembers(online) {
     const people = [...new Set(online)].map((n) => users[n] || { username: n, displayName: n })
       .sort((a, b) => a.displayName.localeCompare(b.displayName));
@@ -1135,10 +1284,8 @@
       setAvatar(row.firstChild, p);
       row.lastChild.textContent = p.displayName;
       if (p.role) row.appendChild(badgeEl(p.role));
-      if (isStaff(me) && p.username !== me.username) {
-        row.classList.add('clickable');
-        row.onclick = () => openAdmin(p.username);
-      }
+      row.classList.add('clickable');
+      row.onclick = () => openCard(p.username);
       list.appendChild(row);
     });
   }
