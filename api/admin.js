@@ -1,8 +1,8 @@
 import { cmd, pipeline, route, readBody } from './_store.js';
-import { requireUser, isStaff, userKey, cleanUsername, publicUser, saveUser, parseUser } from './_auth.js';
+import { requireUser, isStaff, userKey, cleanUsername, publicUser, saveUser, parseUser, userBanKeys } from './_auth.js';
 
 // GET  /api/admin  -> { users: [...], signupsOpen }
-// POST /api/admin  { action: "ban" | "unban" | "promote" | "demote", username }
+// POST /api/admin  { action: "ban" | "unban" | "promote" | "demote", username, mode?: "normal" | "device" }
 //                  { action: "signups", open: true | false }
 // Owner: everything. Admins: ban/unban regular members, open/close sign-ups.
 export default route(async (req, res) => {
@@ -25,8 +25,27 @@ export default route(async (req, res) => {
 
       if (b.action === 'ban' || b.action === 'unban') {
         if (target.role === 'admin' && me.role !== 'owner') return res.status(403).json({ error: 'Only the owner can ban admins' });
+        // Lift any old IP/device ban first (only keys that still point at this user).
+        const oldKeys = target.banKeys || [];
+        if (oldKeys.length) {
+          const owners = await cmd('MGET', ...oldKeys);
+          const mine = oldKeys.filter((k, i) => owners[i] === target.username);
+          if (mine.length) await cmd('DEL', ...mine);
+        }
+        target.banKeys = [];
+        target.banType = null;
         target.banned = b.action === 'ban';
-        if (target.banned) target.role = null;
+        if (target.banned) {
+          target.role = null;
+          target.banType = 'normal';
+          if (b.mode === 'device') {
+            // Block every IP + device they've recently used, so new accounts from there are blocked too.
+            const keys = userBanKeys(target);
+            if (keys.length) await pipeline(keys.map((k) => ['SET', k, target.username]));
+            target.banKeys = keys;
+            target.banType = 'device';
+          }
+        }
       } else if (b.action === 'promote' || b.action === 'demote') {
         if (me.role !== 'owner') return res.status(403).json({ error: 'Only the owner can change admins' });
         if (target.banned) return res.status(400).json({ error: 'Unban them first' });
@@ -43,7 +62,7 @@ export default route(async (req, res) => {
   const raws = unique.length ? (await pipeline([['MGET', ...unique.map(userKey)]]))[0] : [];
   const users = raws.filter(Boolean).map((r) => {
     const u = parseUser(r);
-    return { ...publicUser(u), banned: !!u.banned, created: u.created };
+    return { ...publicUser(u), banned: !!u.banned, banType: u.banned ? u.banType || 'normal' : null, created: u.created };
   });
   res.status(200).json({ users, signupsOpen: signups !== 'closed' });
 });
