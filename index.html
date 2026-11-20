@@ -1,0 +1,1020 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Calculator</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23333'/%3E%3Crect x='12' y='10' width='40' height='14' rx='3' fill='%23ddd'/%3E%3Cg fill='%23ff9f0a'%3E%3Ccircle cx='18' cy='36' r='5'/%3E%3Ccircle cx='32' cy='36' r='5'/%3E%3Ccircle cx='46' cy='36' r='5'/%3E%3Ccircle cx='18' cy='50' r='5'/%3E%3Ccircle cx='32' cy='50' r='5'/%3E%3Ccircle cx='46' cy='50' r='5'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg-0: #1e1f22; --bg-1: #2b2d31; --bg-2: #313338; --bg-3: #383a40; --bg-hover: #35373c;
+    --text: #dbdee1; --text-dim: #949ba4; --text-bright: #f2f3f5;
+    --accent: #5865f2; --accent-hover: #4752c4; --green: #23a55a; --red: #f23f43;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { background: #000; color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  button:disabled { opacity: .6; cursor: default; }
+  .hidden { display: none !important; }
+
+  /* ================= CALCULATOR ================= */
+  #calc { height: 100%; display: flex; align-items: center; justify-content: center; background: #000; }
+  .calc-body { width: 100%; max-width: 380px; height: 100%; max-height: 720px; display: flex; flex-direction: column; justify-content: flex-end; padding: 20px 16px calc(24px + env(safe-area-inset-bottom)); user-select: none; }
+  .calc-display { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; padding: 0 10px 14px; min-height: 0; }
+  .calc-prev { color: #8e8e93; font-size: 22px; min-height: 28px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .calc-main { color: #fff; font-size: 76px; font-weight: 300; line-height: 1.05; white-space: nowrap; overflow: hidden; max-width: 100%; letter-spacing: -1px; }
+  .calc-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .key { aspect-ratio: 1; border-radius: 50%; font-size: 32px; background: #333; color: #fff; transition: filter .1s; display: flex; align-items: center; justify-content: center; }
+  .key:active { filter: brightness(1.45); }
+  .key.fn { background: #a5a5a5; color: #000; font-size: 26px; }
+  .key.op { background: #ff9f0a; font-size: 38px; }
+  .key.op.active { background: #fff; color: #ff9f0a; }
+  .key.zero { grid-column: span 2; aspect-ratio: auto; border-radius: 999px; justify-content: flex-start; padding-left: 30px; }
+
+  /* ================= AUTH ================= */
+  #auth { position: fixed; inset: 0; background: linear-gradient(135deg, #3b2f8f, #1e1f22 60%); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 60; }
+  .auth-card { background: var(--bg-2); border-radius: 8px; padding: 32px; width: 100%; max-width: 420px; box-shadow: 0 8px 32px rgba(0,0,0,.4); }
+  .auth-card h2 { color: var(--text-bright); text-align: center; font-size: 24px; margin-bottom: 6px; }
+  .auth-card > p { color: var(--text-dim); text-align: center; margin-bottom: 20px; font-size: 15px; }
+  .auth-card .btn { width: 100%; padding: 12px; margin-top: 4px; font-size: 16px; }
+  .auth-switch { margin-top: 12px; font-size: 14px; color: var(--text-dim); }
+  .auth-switch button { color: #00a8fc; }
+  .auth-switch button:hover { text-decoration: underline; }
+  .err { color: #fa777c; font-size: 13px; min-height: 18px; margin-bottom: 8px; }
+  .auth-lock { display: block; margin: 16px auto 0; color: var(--text-dim); font-size: 13px; }
+  .auth-lock:hover { color: var(--text); }
+
+  /* ================= CHAT APP ================= */
+  #app { height: 100%; display: flex; background: var(--bg-2); }
+  .nav { display: flex; flex-shrink: 0; }
+  .rail { width: 72px; background: var(--bg-0); display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 8px; flex-shrink: 0; }
+  .rail-icon { width: 48px; height: 48px; border-radius: 16px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; position: relative; }
+  .rail-icon::before { content: ""; position: absolute; left: -12px; width: 4px; height: 40px; background: #fff; border-radius: 0 4px 4px 0; }
+  .rail-sep { width: 32px; height: 2px; background: var(--bg-3); border-radius: 1px; }
+  .rail-btn { width: 48px; height: 48px; border-radius: 50%; background: var(--bg-2); color: var(--green); display: flex; align-items: center; justify-content: center; transition: border-radius .15s, background .15s, color .15s; }
+  .rail-btn:hover { border-radius: 16px; background: var(--green); color: #fff; }
+  .rail-btn.lock { margin-top: auto; color: var(--red); }
+  .rail-btn.lock:hover { background: var(--red); color: #fff; }
+
+  .sidebar { width: 240px; background: var(--bg-1); display: flex; flex-direction: column; flex-shrink: 0; }
+  .server-head { height: 48px; padding: 0 16px; display: flex; align-items: center; font-weight: 600; color: var(--text-bright); border-bottom: 1px solid var(--bg-0); box-shadow: 0 1px 0 rgba(0,0,0,.2); }
+  .channels { flex: 1; overflow-y: auto; padding: 16px 8px; }
+  .cat { display: flex; align-items: center; justify-content: space-between; padding: 0 8px 4px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; color: var(--text-dim); }
+  .cat button { color: var(--text-dim); font-size: 18px; line-height: 1; padding: 0 2px; }
+  .cat button:hover { color: var(--text); }
+  .chan { display: flex; align-items: center; gap: 6px; width: 100%; padding: 6px 8px; margin: 1px 0; border-radius: 4px; color: var(--text-dim); font-size: 15px; text-align: left; }
+  .chan:hover { background: var(--bg-hover); color: var(--text); }
+  .chan.active { background: var(--bg-3); color: var(--text-bright); }
+  .chan .hash { font-size: 20px; opacity: .7; width: 20px; text-align: center; }
+  .me { height: 52px; background: #232428; display: flex; align-items: center; gap: 8px; padding: 0 8px; }
+  .me-click { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 4px; margin-left: -4px; border-radius: 4px; text-align: left; }
+  .me-click:hover { background: var(--bg-hover); }
+  .me-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: var(--text-bright); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .me-name small { display: block; font-weight: 400; font-size: 12px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; }
+  .icon-btn { width: 32px; height: 32px; border-radius: 4px; color: var(--text-dim); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .icon-btn:hover { background: var(--bg-hover); color: var(--text); }
+
+  .avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 16px; position: relative; background-size: cover; background-position: center; }
+  .avatar.sm { width: 32px; height: 32px; font-size: 14px; }
+  .avatar.xl { width: 96px; height: 96px; font-size: 38px; }
+  .avatar.online::after { content: ""; position: absolute; right: -2px; bottom: -2px; width: 10px; height: 10px; border-radius: 50%; background: var(--green); border: 3px solid var(--bg-1); }
+
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
+  .chat-head { height: 48px; padding: 0 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--bg-0); box-shadow: 0 1px 0 rgba(0,0,0,.2); flex-shrink: 0; }
+  .chat-head h1 { font-size: 16px; font-weight: 600; color: var(--text-bright); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chat-head h1 span { color: var(--text-dim); font-weight: 400; margin-right: 4px; }
+  .menu-btn { display: none !important; }
+  .banner { background: var(--red); color: #fff; font-size: 13px; padding: 8px 16px; }
+  .messages { flex: 1; overflow-y: auto; padding: 16px 0 8px; }
+  .welcome { padding: 16px 16px 24px; }
+  .welcome .big { width: 68px; height: 68px; border-radius: 50%; background: var(--bg-3); display: flex; align-items: center; justify-content: center; font-size: 40px; color: var(--text-bright); margin-bottom: 8px; }
+  .welcome h2 { font-size: 28px; color: var(--text-bright); margin-bottom: 4px; }
+  .welcome p { color: var(--text-dim); }
+  .msg { display: flex; gap: 16px; padding: 2px 16px; margin-top: 16px; }
+  .msg.cont { margin-top: 0; }
+  .msg:hover { background: #2e3035; }
+  .msg .gutter { width: 40px; flex-shrink: 0; }
+  .msg.cont .gutter { font-size: 11px; color: transparent; text-align: right; padding-top: 4px; }
+  .msg.cont:hover .gutter { color: var(--text-dim); }
+  .msg-body { min-width: 0; flex: 1; }
+  .msg-top { display: flex; align-items: baseline; gap: 8px; }
+  .msg-user { font-weight: 600; font-size: 15px; }
+  .msg-time { font-size: 12px; color: var(--text-dim); }
+  .msg-text { font-size: 15px; line-height: 1.375; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; color: var(--text); }
+  .msg-text:empty { display: none; }
+  .msg-text a { color: #00a8fc; text-decoration: none; }
+  .msg-text a:hover { text-decoration: underline; }
+  .msg-text code { background: var(--bg-0); padding: 1px 4px; border-radius: 3px; font-size: 13px; font-family: Consolas, monospace; }
+  .msg-img { display: block; margin: 4px 0 2px; max-width: min(400px, 100%); max-height: 320px; border-radius: 8px; cursor: zoom-in; background: var(--bg-1); min-width: 60px; min-height: 60px; object-fit: contain; }
+  .msg.pending .msg-text, .msg.pending .msg-img { opacity: .5; }
+
+  .composer { padding: 0 16px calc(20px + env(safe-area-inset-bottom)); flex-shrink: 0; }
+  .composer-box { background: var(--bg-3); border-radius: 8px; }
+  .attach-preview { padding: 12px 12px 0; display: flex; }
+  .attach-preview .thumb { position: relative; background: var(--bg-1); border-radius: 6px; padding: 8px; }
+  .attach-preview img { display: block; max-height: 140px; max-width: 220px; border-radius: 4px; }
+  .attach-preview .rm { position: absolute; top: -8px; right: -8px; width: 26px; height: 26px; border-radius: 50%; background: var(--red); color: #fff; font-size: 16px; line-height: 1; }
+  .composer-row { display: flex; align-items: flex-end; padding: 0 8px 0 6px; }
+  .composer textarea { flex: 1; background: none; border: 0; outline: 0; color: var(--text); font: inherit; font-size: 15px; resize: none; padding: 11px 4px; max-height: 200px; line-height: 1.375; min-width: 0; }
+  .composer textarea::placeholder { color: #6d6f78; }
+  .comp-btn { width: 36px; height: 36px; margin: 4px 0; color: var(--text-dim); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .comp-btn:hover { color: var(--text-bright); }
+  .drop-hint { position: absolute; inset: 0; background: rgba(88,101,242,.85); color: #fff; font-size: 22px; font-weight: 600; display: flex; align-items: center; justify-content: center; z-index: 20; pointer-events: none; }
+
+  .members { width: 240px; background: var(--bg-1); padding: 16px 8px; overflow-y: auto; flex-shrink: 0; }
+  .members h3 { font-size: 12px; text-transform: uppercase; color: var(--text-dim); padding: 0 8px 8px; font-weight: 600; }
+  .member { display: flex; align-items: center; gap: 12px; padding: 6px 8px; border-radius: 4px; font-size: 15px; color: var(--text-dim); }
+  .member:hover { background: var(--bg-hover); color: var(--text); }
+  .member .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* modals */
+  .modal-wrap { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  .modal { background: var(--bg-2); border-radius: 8px; width: 100%; max-width: 440px; overflow: hidden; max-height: 100%; display: flex; flex-direction: column; }
+  .modal-inner { padding: 24px 16px 16px; overflow-y: auto; }
+  .modal h2 { color: var(--text-bright); font-size: 22px; text-align: center; margin-bottom: 8px; }
+  .modal p { color: var(--text-dim); text-align: center; font-size: 14px; margin-bottom: 20px; }
+  label.lbl { display: block; font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
+  input.field { width: 100%; background: var(--bg-0); border: 0; border-radius: 4px; padding: 10px; color: var(--text); font: inherit; font-size: 16px; outline: 0; margin-bottom: 16px; }
+  .swatches { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .swatch { width: 32px; height: 32px; border-radius: 50%; border: 3px solid transparent; }
+  .swatch.sel { border-color: #fff; }
+  .pfp-row { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+  .pfp-row .actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+  .pfp-row .uname { color: var(--text-dim); font-size: 14px; }
+  .link-btn { color: #00a8fc; font-size: 14px; }
+  .link-btn:hover { text-decoration: underline; }
+  .link-btn.danger { color: #fa777c; }
+  details { margin-bottom: 8px; }
+  summary { cursor: pointer; color: var(--text-dim); font-size: 14px; margin-bottom: 12px; }
+  .modal-foot { background: var(--bg-1); padding: 16px; display: flex; justify-content: flex-end; gap: 8px; align-items: center; }
+  .modal-foot .spacer { flex: 1; }
+  .btn { background: var(--accent); color: #fff; padding: 10px 20px; border-radius: 4px; font-weight: 500; font-size: 14px; }
+  .btn:hover:not(:disabled) { background: var(--accent-hover); }
+  .btn.ghost { background: none; }
+  .btn.ghost:hover { text-decoration: underline; background: none; }
+  .btn.red { background: none; color: #fa777c; padding-left: 0; }
+  .btn.red:hover { text-decoration: underline; background: none; }
+
+  .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.88); z-index: 70; display: flex; align-items: center; justify-content: center; padding: 24px; cursor: zoom-out; }
+  .lightbox img { max-width: 100%; max-height: 100%; border-radius: 4px; }
+  .scrim { display: none; }
+
+  @media (max-width: 1000px) { .members { display: none; } .members.show { display: block; position: fixed; right: 0; top: 48px; bottom: 0; z-index: 30; box-shadow: -4px 0 16px rgba(0,0,0,.4); } }
+  @media (max-width: 768px) {
+    .menu-btn { display: flex !important; }
+    .nav { position: fixed; top: 0; bottom: 0; left: 0; z-index: 40; transform: translateX(-100%); transition: transform .2s; }
+    .nav.open { transform: none; }
+    .scrim.show { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 35; }
+    .msg { gap: 12px; padding: 2px 12px; }
+    .auth-card { padding: 24px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= CALCULATOR (the disguise) ================= -->
+<div id="calc">
+  <div class="calc-body">
+    <div class="calc-display">
+      <div class="calc-prev" id="calcPrev"></div>
+      <div class="calc-main" id="calcMain">0</div>
+    </div>
+    <div class="calc-keys" id="calcKeys">
+      <button class="key fn" data-k="C" id="clearKey">AC</button>
+      <button class="key fn" data-k="neg">±</button>
+      <button class="key fn" data-k="%">%</button>
+      <button class="key op" data-k="/">÷</button>
+      <button class="key" data-k="7">7</button>
+      <button class="key" data-k="8">8</button>
+      <button class="key" data-k="9">9</button>
+      <button class="key op" data-k="*">×</button>
+      <button class="key" data-k="4">4</button>
+      <button class="key" data-k="5">5</button>
+      <button class="key" data-k="6">6</button>
+      <button class="key op" data-k="-">−</button>
+      <button class="key" data-k="1">1</button>
+      <button class="key" data-k="2">2</button>
+      <button class="key" data-k="3">3</button>
+      <button class="key op" data-k="+">+</button>
+      <button class="key zero" data-k="0">0</button>
+      <button class="key" data-k=".">.</button>
+      <button class="key op" data-k="=">=</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= LOGIN / REGISTER ================= -->
+<div id="auth" class="hidden">
+  <form class="auth-card" id="authForm" autocomplete="on">
+    <h2 id="authTitle">Welcome back!</h2>
+    <p id="authSub">Log in to Hideout.</p>
+    <label class="lbl" for="authUser">Username</label>
+    <input class="field" id="authUser" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="20" required>
+    <div id="displayWrap" class="hidden">
+      <label class="lbl" for="authDisplay">Display name <span style="text-transform:none;font-weight:400">(optional)</span></label>
+      <input class="field" id="authDisplay" maxlength="32" autocomplete="off">
+    </div>
+    <label class="lbl" for="authPass">Password</label>
+    <input class="field" id="authPass" type="password" name="password" autocomplete="current-password" maxlength="100" required>
+    <div class="err" id="authErr"></div>
+    <button class="btn" type="submit" id="authSubmit">Log In</button>
+    <div class="auth-switch" id="authSwitch"></div>
+    <button type="button" class="auth-lock" id="authLock">Back to calculator</button>
+  </form>
+</div>
+
+<!-- ================= CHAT APP ================= -->
+<div id="app" class="hidden">
+  <div class="nav" id="nav">
+    <nav class="rail">
+      <div class="rail-icon" title="Hideout">H</div>
+      <div class="rail-sep"></div>
+      <button class="rail-btn" id="addChanRail" title="New channel">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M13 5h-2v6H5v2h6v6h2v-6h6v-2h-6z"/></svg>
+      </button>
+      <button class="rail-btn lock" id="lockBtn" title="Lock (Esc)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17 9V7A5 5 0 0 0 7 7v2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2zM9 7a3 3 0 0 1 6 0v2H9zm4 9.7V18h-2v-1.3a2 2 0 1 1 2 0z"/></svg>
+      </button>
+    </nav>
+    <aside class="sidebar">
+      <div class="server-head">Hideout</div>
+      <div class="channels">
+        <div class="cat"><span>Text Channels</span><button id="addChan" title="Create channel">+</button></div>
+        <div id="chanList"></div>
+      </div>
+      <div class="me">
+        <button class="me-click" id="meClick" title="Edit profile">
+          <div class="avatar sm online" id="meAvatar"></div>
+          <div class="me-name"><span id="meName"></span><small id="meUser"></small></div>
+        </button>
+        <button class="icon-btn" id="editMe" title="Settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3h-4l-.4 2.7a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.2 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1L11 21h4l.4-2.7a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
+        </button>
+      </div>
+    </aside>
+  </div>
+  <div class="scrim" id="scrim"></div>
+
+  <main class="main" id="main">
+    <header class="chat-head">
+      <button class="icon-btn menu-btn" id="menuBtn" title="Channels">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+      </button>
+      <h1><span>#</span><b id="chanTitle">general</b></h1>
+      <button class="icon-btn" id="membersBtn" title="Members">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M14 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM2 20c0-3.3 3.6-6 8-6s8 2.7 8 6v1H2zm16-9.8a3 3 0 0 0 0-4.4 3 3 0 1 1 0 4.4zM20 21v-1c0-1.9-.8-3.6-2.1-4.9 2.5.5 4.1 2.2 4.1 4.9v1z"/></svg>
+      </button>
+    </header>
+    <div class="banner hidden" id="banner"></div>
+    <div class="messages" id="messages"></div>
+    <form class="composer" id="composer">
+      <div class="composer-box">
+        <div class="attach-preview hidden" id="attachPreview">
+          <div class="thumb"><img id="attachImg" alt="Attachment preview"><button type="button" class="rm" id="attachRm" title="Remove">×</button></div>
+        </div>
+        <div class="composer-row">
+          <button type="button" class="comp-btn" id="attachBtn" title="Attach a photo">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4z"/></svg>
+          </button>
+          <textarea id="input" rows="1" maxlength="2000" placeholder="Message #general"></textarea>
+          <button class="comp-btn" type="submit" id="sendBtn" title="Send">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+          </button>
+        </div>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" class="hidden">
+    </form>
+    <div class="drop-hint hidden" id="dropHint">Drop photo to attach</div>
+  </main>
+
+  <aside class="members" id="members">
+    <h3 id="onlineHead">Online — 0</h3>
+    <div id="memberList"></div>
+  </aside>
+</div>
+
+<!-- profile modal -->
+<div class="modal-wrap hidden" id="profileModal">
+  <form class="modal" id="profileForm">
+    <div class="modal-inner">
+      <h2>My Profile</h2>
+      <p>This is how others see you.</p>
+      <div class="pfp-row">
+        <div class="avatar xl" id="pfpPreview"></div>
+        <div class="actions">
+          <span class="uname" id="pfpUser"></span>
+          <button type="button" class="link-btn" id="pfpChange">Change profile picture</button>
+          <button type="button" class="link-btn danger" id="pfpRemove">Remove picture</button>
+        </div>
+      </div>
+      <input type="file" id="pfpFile" accept="image/*" class="hidden">
+      <label class="lbl" for="nameInput">Display name</label>
+      <input class="field" type="text" id="nameInput" maxlength="32" autocomplete="off" required>
+      <label class="lbl">Name color</label>
+      <div class="swatches" id="swatches"></div>
+      <details id="pwDetails">
+        <summary>Change password</summary>
+        <label class="lbl" for="curPass">Current password</label>
+        <input class="field" type="password" id="curPass" autocomplete="current-password">
+        <label class="lbl" for="newPass">New password</label>
+        <input class="field" type="password" id="newPass" autocomplete="new-password">
+      </details>
+      <div class="err" id="profileErr"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn red" type="button" id="logoutBtn">Log out</button>
+      <span class="spacer"></span>
+      <button class="btn ghost" type="button" id="profileCancel">Cancel</button>
+      <button class="btn" type="submit" id="profileSave">Save</button>
+    </div>
+  </form>
+</div>
+
+<!-- new channel modal -->
+<div class="modal-wrap hidden" id="chanModal">
+  <form class="modal" id="chanForm">
+    <div class="modal-inner">
+      <h2>Create channel</h2>
+      <p>Lowercase letters, numbers and dashes.</p>
+      <label class="lbl" for="chanInput">Channel name</label>
+      <input class="field" type="text" id="chanInput" maxlength="24" autocomplete="off" placeholder="new-channel" required>
+    </div>
+    <div class="modal-foot"><button class="btn ghost" type="button" id="chanCancel">Cancel</button><button class="btn" type="submit">Create</button></div>
+  </form>
+</div>
+
+<div class="lightbox hidden" id="lightbox"><img id="lightboxImg" alt=""></div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const SECRET = '111+111';
+
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+    del(k) { try { localStorage.removeItem(k); } catch {} },
+  };
+
+  /* =====================================================
+     CALCULATOR
+     ===================================================== */
+  let expr = '';
+  let justEvaluated = false;
+  const isOp = (c) => '+-*/'.includes(c);
+  const pretty = (s) => s.replace(/\*/g, '×').replace(/\//g, '÷').replace(/(\d|\))-/g, '$1−');
+
+  function renderCalc(prev = '') {
+    const shown = expr === '' ? '0' : pretty(expr);
+    const main = $('calcMain');
+    main.textContent = shown;
+    const len = shown.length;
+    main.style.fontSize = len <= 6 ? '76px' : len <= 9 ? '58px' : len <= 13 ? '42px' : '30px';
+    $('calcPrev').textContent = prev;
+    $('clearKey').textContent = expr === '' ? 'AC' : 'C';
+    const last = expr.slice(-1);
+    document.querySelectorAll('.key.op').forEach((b) => b.classList.toggle('active', b.dataset.k === last && isOp(last)));
+  }
+
+  function evaluate(s) {
+    const toks = s.match(/\d*\.\d+|\d+\.?|[+\-*/]/g) || [];
+    const nums = [], ops = [];
+    let neg = false, expectNum = true;
+    for (const t of toks) {
+      if (/\d/.test(t)) { nums.push((neg ? -1 : 1) * parseFloat(t)); neg = false; expectNum = false; }
+      else if (expectNum) { if (t === '-') neg = !neg; }
+      else { ops.push(t); expectNum = true; }
+    }
+    if (!nums.length) return 0;
+    ops.length = Math.min(ops.length, nums.length - 1);
+    const n = [nums[0]], p = [];
+    ops.forEach((op, i) => {
+      const b = nums[i + 1];
+      if (op === '*') n[n.length - 1] *= b;
+      else if (op === '/') n[n.length - 1] /= b;
+      else { p.push(op); n.push(b); }
+    });
+    return p.reduce((acc, op, i) => (op === '+' ? acc + n[i + 1] : acc - n[i + 1]), n[0]);
+  }
+  const fmt = (x) => (isFinite(x) ? String(parseFloat(x.toPrecision(12))) : 'Error');
+
+  function press(k) {
+    if (k === '=') {
+      if (expr === SECRET) { unlock(); return; }
+      if (!expr) return;
+      const r = fmt(evaluate(expr));
+      const prev = pretty(expr) + ' =';
+      expr = r === 'Error' ? '' : r;
+      justEvaluated = true;
+      renderCalc(prev);
+      if (r === 'Error') $('calcMain').textContent = 'Error';
+      return;
+    }
+    if (k === 'C') { expr = ''; justEvaluated = false; renderCalc(); return; }
+    if (k === 'back') { expr = justEvaluated ? '' : expr.slice(0, -1); justEvaluated = false; renderCalc(); return; }
+    if (expr.length >= 40 && k !== 'neg' && k !== '%') return;
+
+    if (/\d/.test(k)) {
+      if (justEvaluated) expr = '';
+      if (expr.match(/(\d*\.?\d*)$/)[0] === '0') expr = expr.slice(0, -1);
+      expr += k;
+    } else if (k === '.') {
+      if (justEvaluated) expr = '';
+      const m = expr.match(/(\d*\.?\d*)$/)[0];
+      if (m.includes('.')) return;
+      expr += m === '' ? '0.' : '.';
+    } else if (isOp(k)) {
+      const last = expr.slice(-1);
+      if (expr === '') { if (k === '-') expr = '-'; }
+      else if (isOp(last)) {
+        if (k === '-' && (last === '*' || last === '/')) expr += '-';
+        else expr = expr.replace(/[+\-*/]+$/, '') + k;
+        if (expr === k) expr = k === '-' ? '-' : '';
+      } else expr += k;
+    } else if (k === 'neg' || k === '%') {
+      const m = expr.match(/(\d*\.?\d+\.?|\d+\.)$/);
+      if (!m) return;
+      const before = expr.slice(0, m.index);
+      if (k === '%') expr = before + fmt(parseFloat(m[0]) / 100);
+      else if (before.endsWith('-') && (before.length === 1 || isOp(before.slice(-2, -1)))) expr = before.slice(0, -1) + m[0];
+      else expr = before + '-' + m[0];
+    }
+    justEvaluated = false;
+    renderCalc();
+  }
+
+  $('calcKeys').addEventListener('click', (e) => {
+    const b = e.target.closest('.key');
+    if (b) press(b.dataset.k);
+  });
+
+  /* =====================================================
+     API
+     ===================================================== */
+  let token = store.get('calc.t');
+
+  async function api(path, { method = 'GET', body } = {}) {
+    const headers = {};
+    if (token) headers.Authorization = 'Bearer ' + token;
+    if (body) headers['Content-Type'] = 'application/json';
+    let r;
+    try {
+      r = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
+    } catch {
+      throw new Error('Connection lost. Retrying…');
+    }
+    const data = await r.json().catch(() => ({ error: 'Server returned an invalid response' }));
+    if (r.status === 401 && token && path !== '/api/auth') { signedOut(); throw new Error('Logged out'); }
+    if (!r.ok || data.error) throw new Error(data.error || 'Request failed');
+    return data;
+  }
+
+  const imgUrl = (id) => '/api/img?id=' + encodeURIComponent(id);
+
+  /* =====================================================
+     IMAGES (shrunk in the browser before upload)
+     ===================================================== */
+  const MAX_UPLOAD_CHARS = 1_400_000;
+
+  function readDataUrl(file) {
+    return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+  }
+  function loadImage(src) {
+    return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('Could not read that image')); i.src = src; });
+  }
+
+  async function prepareImage(file, { maxDim, square = false }) {
+    if (!file || !file.type.startsWith('image/')) throw new Error('Please choose an image file');
+    // keep small GIFs as-is so they stay animated
+    if (file.type === 'image/gif' && !square && file.size * 1.37 < MAX_UPLOAD_CHARS) return readDataUrl(file);
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await loadImage(url);
+      let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
+      if (square) { const s = Math.min(sw, sh); sx = (sw - s) / 2; sy = (sh - s) / 2; sw = sh = s; }
+      let scale = Math.min(1, maxDim / Math.max(sw, sh));
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      for (let attempt = 0; attempt < 6; attempt++) {
+        canvas.width = Math.max(1, Math.round(sw * scale));
+        canvas.height = Math.max(1, Math.round(sh * scale));
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+        for (let q = 0.85; q >= 0.5; q -= 0.15) {
+          const out = canvas.toDataURL('image/jpeg', q);
+          if (out.length <= MAX_UPLOAD_CHARS) return out;
+        }
+        scale *= 0.7;
+      }
+      throw new Error('Image is too large');
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  async function uploadImage(dataUrl) {
+    return (await api('/api/upload', { method: 'POST', body: { data: dataUrl } })).id;
+  }
+
+  /* =====================================================
+     LOCK / UNLOCK
+     ===================================================== */
+  let unlocked = false;
+  let me = null;
+
+  async function unlock() {
+    unlocked = true;
+    expr = ''; justEvaluated = false; renderCalc();
+    $('calc').classList.add('hidden');
+    if (!token) return showAuth('login');
+    try {
+      me = (await api('/api/me')).user;
+      if (unlocked) enterApp();
+    } catch (e) {
+      if (!unlocked) return;
+      if (!token) return; // signedOut() already showed the login screen
+      // network trouble: open the app anyway and let polling retry
+      enterApp();
+      showBanner(e.message);
+    }
+  }
+
+  function enterApp() {
+    $('auth').classList.add('hidden');
+    $('app').classList.remove('hidden');
+    startChat();
+  }
+
+  function lock() {
+    unlocked = false;
+    stopPolling();
+    $('messages').innerHTML = '';
+    $('memberList').innerHTML = '';
+    $('input').value = '';
+    $('authPass').value = '';
+    clearAttachment();
+    messages = []; seen.clear(); lastTs = 0;
+    document.querySelectorAll('.modal-wrap, .lightbox').forEach((m) => m.classList.add('hidden'));
+    closeNav();
+    $('app').classList.add('hidden');
+    $('auth').classList.add('hidden');
+    $('calc').classList.remove('hidden');
+    expr = ''; renderCalc();
+  }
+  $('lockBtn').addEventListener('click', lock);
+  $('authLock').addEventListener('click', lock);
+
+  document.addEventListener('keydown', (e) => {
+    if (!unlocked) {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const map = { Enter: '=', '=': '=', Escape: 'C', Backspace: 'back', Delete: 'C', x: '*', X: '*' };
+      const k = map[e.key] || e.key;
+      if (/^[\d.+\-*/%=]$/.test(k) || k === 'C' || k === 'back') { e.preventDefault(); press(k); }
+      return;
+    }
+    if (e.key === 'Escape') {
+      if (!$('lightbox').classList.contains('hidden')) { $('lightbox').classList.add('hidden'); return; }
+      const openModal = [...document.querySelectorAll('.modal-wrap')].find((m) => !m.classList.contains('hidden'));
+      if (openModal) { openModal.classList.add('hidden'); return; }
+      lock();
+    }
+  });
+
+  /* =====================================================
+     AUTH
+     ===================================================== */
+  let authMode = 'login';
+
+  function showAuth(mode) {
+    authMode = mode;
+    const reg = mode === 'register';
+    $('authTitle').textContent = reg ? 'Create an account' : 'Welcome back!';
+    $('authSub').textContent = reg ? 'Pick a username and password.' : 'Log in to Hideout.';
+    $('authSubmit').textContent = reg ? 'Create Account' : 'Log In';
+    $('displayWrap').classList.toggle('hidden', !reg);
+    $('authPass').autocomplete = reg ? 'new-password' : 'current-password';
+    $('authSwitch').innerHTML = reg
+      ? 'Already have an account? <button type="button">Log in</button>'
+      : 'Need an account? <button type="button">Register</button>';
+    $('authSwitch').querySelector('button').onclick = () => showAuth(reg ? 'login' : 'register');
+    $('authErr').textContent = '';
+    $('app').classList.add('hidden');
+    $('auth').classList.remove('hidden');
+    setTimeout(() => $('authUser').focus(), 50);
+  }
+
+  $('authForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('authErr').textContent = '';
+    $('authSubmit').disabled = true;
+    try {
+      const data = await api('/api/auth', {
+        method: 'POST',
+        body: { action: authMode, username: $('authUser').value, password: $('authPass').value, displayName: $('authDisplay').value },
+      });
+      token = data.token; store.set('calc.t', token);
+      me = data.user;
+      $('authPass').value = '';
+      if (unlocked) enterApp();
+    } catch (err) {
+      $('authErr').textContent = err.message;
+    } finally {
+      $('authSubmit').disabled = false;
+    }
+  });
+
+  function signedOut() {
+    token = null; me = null; store.del('calc.t');
+    stopPolling();
+    if (unlocked) showAuth('login');
+  }
+
+  /* =====================================================
+     PROFILE
+     ===================================================== */
+  const COLORS = ['#5865f2', '#eb459e', '#ed4245', '#f0b232', '#23a55a', '#00a8fc', '#9b59b6', '#e67e22', '#1abc9c', '#95a5a6'];
+  let draft = null; // { color, avatar, avatarData }
+
+  function setAvatar(el, profile) {
+    const name = profile?.displayName || profile?.username || '?';
+    if (profile?.avatarData || profile?.avatar) {
+      el.style.backgroundImage = `url("${profile.avatarData || imgUrl(profile.avatar)}")`;
+      el.style.backgroundColor = 'var(--bg-3)';
+      el.textContent = '';
+    } else {
+      el.style.backgroundImage = '';
+      el.style.backgroundColor = profile?.color || '#5865f2';
+      el.textContent = name.trim().charAt(0).toUpperCase();
+    }
+  }
+
+  function renderMe() {
+    if (!me) return;
+    $('meName').textContent = me.displayName;
+    $('meUser').textContent = '@' + me.username;
+    setAvatar($('meAvatar'), me);
+  }
+
+  function renderSwatches() {
+    $('swatches').innerHTML = '';
+    COLORS.forEach((c) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'swatch' + (c === draft.color ? ' sel' : '');
+      b.style.background = c;
+      b.title = c;
+      b.onclick = () => { draft.color = c; renderSwatches(); renderDraftAvatar(); };
+      $('swatches').appendChild(b);
+    });
+  }
+  function renderDraftAvatar() {
+    setAvatar($('pfpPreview'), { ...me, displayName: $('nameInput').value || me.username, color: draft.color, avatar: draft.avatar, avatarData: draft.avatarData });
+    $('pfpRemove').classList.toggle('hidden', !draft.avatar && !draft.avatarData);
+  }
+
+  function openProfile() {
+    if (!me) return;
+    draft = { color: me.color, avatar: me.avatar, avatarData: null };
+    $('nameInput').value = me.displayName;
+    $('pfpUser').textContent = '@' + me.username;
+    $('curPass').value = ''; $('newPass').value = '';
+    $('pwDetails').open = false;
+    $('profileErr').textContent = '';
+    renderSwatches();
+    renderDraftAvatar();
+    $('profileModal').classList.remove('hidden');
+    closeNav();
+  }
+  $('meClick').onclick = openProfile;
+  $('editMe').onclick = openProfile;
+  $('profileCancel').onclick = () => $('profileModal').classList.add('hidden');
+  $('nameInput').addEventListener('input', renderDraftAvatar);
+  $('pfpChange').onclick = () => $('pfpFile').click();
+  $('pfpRemove').onclick = () => { draft.avatar = null; draft.avatarData = null; renderDraftAvatar(); };
+  $('pfpFile').addEventListener('change', async () => {
+    const f = $('pfpFile').files[0];
+    $('pfpFile').value = '';
+    if (!f) return;
+    try {
+      draft.avatarData = await prepareImage(f, { maxDim: 256, square: true });
+      renderDraftAvatar();
+    } catch (err) { $('profileErr').textContent = err.message; }
+  });
+
+  $('profileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('profileErr').textContent = '';
+    $('profileSave').disabled = true;
+    try {
+      let avatar = draft.avatar;
+      if (draft.avatarData) avatar = await uploadImage(draft.avatarData);
+      const body = { displayName: $('nameInput').value, color: draft.color, avatar };
+      if ($('newPass').value) { body.currentPassword = $('curPass').value; body.newPassword = $('newPass').value; }
+      me = (await api('/api/me', { method: 'POST', body })).user;
+      users[me.username] = me;
+      renderMe();
+      renderMessages();
+      $('profileModal').classList.add('hidden');
+    } catch (err) {
+      $('profileErr').textContent = err.message;
+    } finally {
+      $('profileSave').disabled = false;
+    }
+  });
+
+  $('logoutBtn').onclick = async () => {
+    try { await api('/api/auth', { method: 'POST', body: { action: 'logout' } }); } catch {}
+    $('profileModal').classList.add('hidden');
+    messages = []; seen.clear(); lastTs = 0;
+    $('messages').innerHTML = '';
+    signedOut();
+  };
+
+  /* =====================================================
+     CHAT
+     ===================================================== */
+  let channel = store.get('calc.ch') || 'general';
+  let channels = ['general'];
+  let messages = [];
+  const seen = new Set();
+  const users = {};
+  let lastTs = 0;
+  let pollTimer = null;
+  let polling = false;
+  let stick = true; // keep the view pinned to the newest message
+
+  function startChat() {
+    if (me) users[me.username] = me;
+    renderMe();
+    switchChannel(channel, true);
+    stopPolling();
+    pollTimer = setInterval(() => { if (!document.hidden) poll(); }, 2000);
+  }
+  function stopPolling() { clearInterval(pollTimer); pollTimer = null; }
+
+  async function poll() {
+    if (!unlocked || polling || !token) return;
+    polling = true;
+    const forChannel = channel;
+    try {
+      const data = await api('/api/poll?' + new URLSearchParams({ channel: forChannel, after: String(lastTs) }));
+      showBanner('');
+      if (!unlocked || forChannel !== channel) return;
+      if (JSON.stringify(data.channels) !== JSON.stringify(channels)) { channels = data.channels; renderChannels(); }
+      let profilesChanged = false;
+      for (const [name, p] of Object.entries(data.users || {})) {
+        if (JSON.stringify(users[name]) !== JSON.stringify(p)) { users[name] = p; profilesChanged = true; }
+      }
+      if (me && users[me.username]) { me = users[me.username]; renderMe(); }
+      if (!addMessages(data.messages) && profilesChanged) renderMessages();
+      renderMembers(data.online);
+    } catch (err) {
+      if (err.message !== 'Logged out') showBanner(err.message);
+    } finally {
+      polling = false;
+    }
+  }
+
+  function showBanner(text) {
+    $('banner').textContent = text;
+    $('banner').classList.toggle('hidden', !text);
+  }
+
+  $('messages').addEventListener('scroll', () => {
+    const el = $('messages');
+    stick = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+  });
+  function scrollToBottom() { const el = $('messages'); el.scrollTop = el.scrollHeight; }
+
+  function addMessages(list) {
+    let added = false;
+    for (const m of list) {
+      if (seen.has(m.id)) continue;
+      const pendingIdx = messages.findIndex((p) => p.pending && p.serverId === m.id);
+      if (pendingIdx >= 0) messages.splice(pendingIdx, 1);
+      seen.add(m.id);
+      messages.push(m);
+      lastTs = Math.max(lastTs, m.ts);
+      added = true;
+    }
+    if (!added) return false;
+    messages.sort((a, b) => (a.pending ? 1 : 0) - (b.pending ? 1 : 0) || a.ts - b.ts);
+    renderMessages();
+    return true;
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function formatText(s) {
+    let h = escapeHtml(s);
+    h = h.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    h = h.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
+    h = h.replace(/(https?:\/\/[^\s<]+[^\s<.,:;"')\]])/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+    return h;
+  }
+  function timeStr(ts) {
+    const d = new Date(ts), now = new Date();
+    const t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    if (d.toDateString() === now.toDateString()) return 'Today at ' + t;
+    const y = new Date(now); y.setDate(now.getDate() - 1);
+    if (d.toDateString() === y.toDateString()) return 'Yesterday at ' + t;
+    return d.toLocaleDateString() + ' ' + t;
+  }
+  function profileFor(m) {
+    return users[m.user] || { username: m.user, displayName: m.user, color: m.color || '#5865f2' };
+  }
+
+  function renderMessages() {
+    const el = $('messages');
+    const frag = document.createDocumentFragment();
+    const w = document.createElement('div');
+    w.className = 'welcome';
+    w.innerHTML = `<div class="big">#</div><h2>Welcome to #${escapeHtml(channel)}!</h2><p>This is the start of the #${escapeHtml(channel)} channel.</p>`;
+    frag.appendChild(w);
+    let prev = null;
+    for (const m of messages) {
+      const p = profileFor(m);
+      const cont = prev && prev.user === m.user && m.ts - prev.ts < 5 * 60 * 1000;
+      const row = document.createElement('div');
+      row.className = 'msg' + (cont ? ' cont' : '') + (m.pending ? ' pending' : '');
+      if (cont) {
+        row.innerHTML = `<div class="gutter">${new Date(m.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</div><div class="msg-body"><div class="msg-text"></div></div>`;
+      } else {
+        row.innerHTML = `<div class="avatar"></div><div class="msg-body"><div class="msg-top"><span class="msg-user"></span><span class="msg-time"></span></div><div class="msg-text"></div></div>`;
+        setAvatar(row.querySelector('.avatar'), p);
+        const u = row.querySelector('.msg-user');
+        u.textContent = p.displayName; u.style.color = p.color; u.title = '@' + p.username;
+        row.querySelector('.msg-time').textContent = timeStr(m.ts);
+      }
+      row.querySelector('.msg-text').innerHTML = formatText(m.text || '');
+      if (m.image || m.localImage) {
+        const img = document.createElement('img');
+        img.className = 'msg-img';
+        img.alt = 'Photo';
+        img.src = m.localImage || imgUrl(m.image);
+        img.onload = () => { if (stick) scrollToBottom(); };
+        img.onclick = () => openLightbox(img.src);
+        row.querySelector('.msg-body').appendChild(img);
+      }
+      frag.appendChild(row);
+      prev = m;
+    }
+    const keep = stick;
+    el.innerHTML = '';
+    el.appendChild(frag);
+    if (keep) scrollToBottom();
+  }
+
+  function openLightbox(src) {
+    $('lightboxImg').src = src;
+    $('lightbox').classList.remove('hidden');
+  }
+  $('lightbox').onclick = () => $('lightbox').classList.add('hidden');
+
+  function renderChannels() {
+    const list = $('chanList');
+    list.innerHTML = '';
+    channels.forEach((c) => {
+      const b = document.createElement('button');
+      b.className = 'chan' + (c === channel ? ' active' : '');
+      b.innerHTML = '<span class="hash">#</span><span></span>';
+      b.lastChild.textContent = c;
+      b.onclick = () => { switchChannel(c); closeNav(); };
+      list.appendChild(b);
+    });
+  }
+
+  function renderMembers(online) {
+    const people = [...new Set(online)].map((n) => users[n] || { username: n, displayName: n })
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+    $('onlineHead').textContent = `Online — ${people.length}`;
+    const list = $('memberList');
+    list.innerHTML = '';
+    people.forEach((p) => {
+      const row = document.createElement('div');
+      row.className = 'member';
+      row.title = '@' + p.username;
+      row.innerHTML = '<div class="avatar sm online"></div><span class="name"></span>';
+      setAvatar(row.firstChild, p);
+      row.lastChild.textContent = p.displayName;
+      list.appendChild(row);
+    });
+  }
+
+  function switchChannel(c, force) {
+    if (c === channel && !force) return;
+    channel = c;
+    store.set('calc.ch', c);
+    messages = []; seen.clear(); lastTs = 0; stick = true;
+    $('chanTitle').textContent = c;
+    $('input').placeholder = `Message #${c}`;
+    renderChannels();
+    renderMessages();
+    poll();
+  }
+
+  /* ---------- attachments ---------- */
+  let attachment = null; // data URL ready to upload
+
+  async function setAttachment(file) {
+    try {
+      attachment = await prepareImage(file, { maxDim: 1600 });
+      $('attachImg').src = attachment;
+      $('attachPreview').classList.remove('hidden');
+      $('input').focus();
+    } catch (err) { showBanner(err.message); }
+  }
+  function clearAttachment() {
+    attachment = null;
+    $('attachImg').removeAttribute('src');
+    $('attachPreview').classList.add('hidden');
+  }
+  $('attachBtn').onclick = () => $('fileInput').click();
+  $('attachRm').onclick = clearAttachment;
+  $('fileInput').addEventListener('change', () => {
+    const f = $('fileInput').files[0];
+    $('fileInput').value = '';
+    if (f) setAttachment(f);
+  });
+  $('input').addEventListener('paste', (e) => {
+    const f = [...(e.clipboardData?.files || [])].find((x) => x.type.startsWith('image/'));
+    if (f) { e.preventDefault(); setAttachment(f); }
+  });
+  let dragDepth = 0;
+  const main = $('main');
+  main.addEventListener('dragenter', (e) => { if (e.dataTransfer?.types.includes('Files')) { dragDepth++; $('dropHint').classList.remove('hidden'); } });
+  main.addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; $('dropHint').classList.add('hidden'); } });
+  main.addEventListener('dragover', (e) => e.preventDefault());
+  main.addEventListener('drop', (e) => {
+    e.preventDefault(); dragDepth = 0; $('dropHint').classList.add('hidden');
+    const f = [...(e.dataTransfer?.files || [])].find((x) => x.type.startsWith('image/'));
+    if (f) setAttachment(f);
+  });
+
+  /* ---------- sending ---------- */
+  const input = $('input');
+  function autosize() { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 200) + 'px'; }
+  input.addEventListener('input', autosize);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('composer').requestSubmit(); }
+  });
+
+  $('composer').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    const image = attachment;
+    if ((!text && !image) || !me) return;
+    input.value = ''; autosize(); clearAttachment();
+    const temp = { id: 'tmp' + Math.random(), user: me.username, text, localImage: image, ts: Date.now(), pending: true };
+    messages.push(temp);
+    stick = true;
+    renderMessages();
+    try {
+      const imageId = image ? await uploadImage(image) : null;
+      const data = await api('/api/send', { method: 'POST', body: { channel, text, image: imageId } });
+      temp.serverId = data.message.id;
+      addMessages([data.message]);
+      if (seen.has(data.message.id)) { messages = messages.filter((m) => m !== temp); renderMessages(); }
+    } catch (err) {
+      messages = messages.filter((m) => m !== temp);
+      renderMessages();
+      if (!input.value) { input.value = text; autosize(); }
+      if (image && !attachment) { attachment = image; $('attachImg').src = image; $('attachPreview').classList.remove('hidden'); }
+      if (err.message !== 'Logged out') showBanner('Message not sent: ' + err.message);
+    }
+  });
+
+  /* ---------- channels ---------- */
+  function openChanModal() { $('chanInput').value = ''; $('chanModal').classList.remove('hidden'); setTimeout(() => $('chanInput').focus(), 50); }
+  $('addChan').onclick = openChanModal;
+  $('addChanRail').onclick = openChanModal;
+  $('chanCancel').onclick = () => $('chanModal').classList.add('hidden');
+  $('chanForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const data = await api('/api/channels', { method: 'POST', body: { name: $('chanInput').value } });
+      $('chanModal').classList.add('hidden');
+      if (!channels.includes(data.channel)) channels.push(data.channel);
+      switchChannel(data.channel);
+      closeNav();
+    } catch (err) { alert(err.message); }
+  });
+
+  /* ---------- layout ---------- */
+  function closeNav() { $('nav').classList.remove('open'); $('scrim').classList.remove('show'); }
+  $('menuBtn').onclick = () => { $('nav').classList.add('open'); $('scrim').classList.add('show'); };
+  $('scrim').onclick = closeNav;
+  $('membersBtn').onclick = () => {
+    if (window.innerWidth > 1000) $('members').classList.toggle('hidden');
+    else $('members').classList.toggle('show');
+  };
+
+  renderCalc();
+})();
+</script>
+</body>
+</html>
