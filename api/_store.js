@@ -34,7 +34,8 @@ export async function cmd(...args) {
 }
 
 // ---------- in-memory fallback ----------
-const mem = globalThis.__chatMem || (globalThis.__chatMem = { lists: {}, zsets: {}, strings: new Map(), expires: new Map() });
+const mem = globalThis.__chatMem || (globalThis.__chatMem = { lists: {}, zsets: {}, sets: {}, strings: new Map(), expires: new Map() });
+mem.sets ||= {};
 
 function range(start, stop, len) {
   let s = +start, e = +stop;
@@ -52,9 +53,16 @@ function memExec([op, key, ...args]) {
   op = op.toUpperCase();
   const list = () => (mem.lists[key] ||= []);
   const zset = () => (mem.zsets[key] ||= new Map());
+  const set = () => (mem.sets[key] ||= new Set());
   switch (op) {
     case 'GET': return strGet(key);
     case 'MGET': return [key, ...args].map(strGet);
+    case 'SADD': { const s = set(); const n = s.size; args.forEach((a) => s.add(a)); return s.size - n; }
+    case 'SREM': { const s = set(); return args.reduce((n, a) => n + (s.delete(a) ? 1 : 0), 0); }
+    case 'SISMEMBER': return set().has(args[0]) ? 1 : 0;
+    case 'SMISMEMBER': return args.map((a) => (set().has(a) ? 1 : 0));
+    case 'SMEMBERS': return [...set()];
+    case 'SCARD': return set().size;
     case 'SET': {
       const [val, ...opts] = args;
       const up = opts.map((o) => o.toUpperCase());
@@ -64,7 +72,11 @@ function memExec([op, key, ...args]) {
       if (ex >= 0) mem.expires.set(key, Date.now() + +opts[ex + 1] * 1000); else mem.expires.delete(key);
       return 'OK';
     }
-    case 'DEL': return [key, ...args].reduce((n, k) => n + (mem.strings.delete(k) ? 1 : 0), 0);
+    case 'DEL': return [key, ...args].reduce((n, k) => {
+      let hit = mem.strings.delete(k);
+      for (const t of [mem.lists, mem.sets, mem.zsets]) if (k in t) { delete t[k]; hit = true; }
+      return n + (hit ? 1 : 0);
+    }, 0);
     case 'INCR': { const v = (+strGet(key) || 0) + 1; mem.strings.set(key, String(v)); return v; }
     case 'EXPIRE': mem.expires.set(key, Date.now() + +args[0] * 1000); return 1;
     case 'RPUSH': list().push(...args); return list().length;

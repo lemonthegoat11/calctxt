@@ -1,8 +1,9 @@
 import { cmd } from './_store.js';
 import { isStaff } from './_auth.js';
+import { MAIN, chanKey } from './_servers.js';
 
 export const MAX_CHANNEL_MEMBERS = 100;
-export const chanKey = (name) => `chat:chan:${name}`;
+export { chanKey };
 
 // Channel settings. Channels made before this feature (and #general) have none: public, no owner.
 export function parseChannel(name, raw) {
@@ -17,31 +18,34 @@ export function parseChannel(name, raw) {
   };
 }
 
-export async function getChannel(name) {
-  return parseChannel(name, await cmd('GET', chanKey(name)));
+export async function getChannel(server, name) {
+  return parseChannel(name, await cmd('GET', chanKey(server.id, name)));
 }
 
-export async function saveChannel(ch) {
-  await cmd('SET', chanKey(ch.name), JSON.stringify(ch));
+export async function saveChannel(server, ch) {
+  await cmd('SET', chanKey(server.id, ch.name), JSON.stringify(ch));
 }
 
-// Server owner/admins see every channel (for moderation).
-export function canView(ch, user) {
-  return !ch.private || isStaff(user) || ch.owner === user.username || ch.members.includes(user.username);
+// Who runs the server: Home = site owner/admins, other servers = their creator.
+const serverBoss = (server, user) => (server.id === MAIN ? isStaff(user) : server.owner === user.username);
+
+// (Membership of the server itself is checked before these are called.)
+export function canView(ch, user, server) {
+  return !ch.private || serverBoss(server, user) || ch.owner === user.username || ch.members.includes(user.username);
 }
 
-export function canManage(ch, user) {
-  return isStaff(user) || (!!ch.owner && ch.owner === user.username);
+export function canManage(ch, user, server) {
+  return serverBoss(server, user) || (!!ch.owner && ch.owner === user.username);
 }
 
 // What a client is allowed to see about a channel.
-export function channelInfo(ch, user) {
+export function channelInfo(ch, user, server) {
   return {
     name: ch.name,
     owner: ch.owner,
     private: ch.private,
     topic: ch.topic,
     members: ch.private ? ch.members : [],
-    canManage: canManage(ch, user),
+    canManage: canManage(ch, user, server),
   };
 }
