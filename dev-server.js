@@ -24,7 +24,8 @@ http.createServer(async (req, res) => {
     const { default: handler } = await import(`./api/${m[1]}.js`);
     return handler(req, res);
   }
-  if (url.pathname === '/' || url.pathname === '/index.html') {
+  // /channels/<server>/<channel> links are handled by the page itself.
+  if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname.startsWith('/channels/')) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.end(await readFile(new URL('./index.html', import.meta.url)));
   }

@@ -1,0 +1,3 @@
+{
+  "rewrites": [{ "source": "/channels/:path*", "destination": "/index.html" }]
+}

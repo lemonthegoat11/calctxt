@@ -7,6 +7,10 @@ Discord-style group chat.
 photo attachments (button, paste or drag-and-drop), channels, an online list, and live messages.
 
 - **Lock it again:** press **Esc**, or the red lock button at the bottom-left. The chat is wiped from the screen and the calculator comes back. You stay logged in, so next time 14789325+33 takes you straight back in.
+- **Channel links:** every channel has its own address, like `/channels/<server>/<channel>`. Back/Forward
+  move between channels, and opening a channel link takes you to that channel after you unlock.
+- **Reloading** keeps you in the chat on the same channel (that tab only). Locking, logging out, a new tab or
+  reopening the browser all go back to the calculator, and the address bar shows plain `/` while it's locked.
 - **Log out / change password / bio:** click your name at the bottom-left.
 - **See someone's profile:** click their name or picture on a message, or in the Online list. It shows their bio and when they joined.
 - The tab title and icon always say "Calculator".
