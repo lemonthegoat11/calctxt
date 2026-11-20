@@ -46,10 +46,14 @@ export async function getSessionUser(req) {
   return JSON.parse(raw);
 }
 
-// Returns the logged-in user, or sends 401 and returns null.
+export const BANNED_MSG = 'You have been banned from this server.';
+export const isStaff = (u) => u && (u.role === 'owner' || u.role === 'admin');
+
+// Returns the logged-in user, or sends 401/403 and returns null.
 export async function requireUser(req, res) {
   const user = await getSessionUser(req);
   if (!user) { res.status(401).json({ error: 'Not logged in' }); return null; }
+  if (user.banned) { res.status(403).json({ error: BANNED_MSG, banned: true }); return null; }
   return user;
 }
 
@@ -58,7 +62,7 @@ export async function saveUser(user) {
 }
 
 export function publicUser(u) {
-  return { username: u.username, displayName: u.displayName || u.username, color: u.color, avatar: u.avatar || null };
+  return { username: u.username, displayName: u.displayName || u.username, color: u.color, avatar: u.avatar || null, role: u.role || null };
 }
 
 // Look up public profiles for a list of usernames.

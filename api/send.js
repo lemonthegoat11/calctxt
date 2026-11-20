@@ -1,5 +1,6 @@
-import { pipeline, route, cleanChannel, readBody, isImageId, MAX_MESSAGES_PER_CHANNEL } from './_store.js';
+import { cmd, pipeline, route, cleanChannel, readBody, isImageId, MAX_MESSAGES_PER_CHANNEL } from './_store.js';
 import { requireUser } from './_auth.js';
+import { getChannel, canView } from './_channels.js';
 
 // POST /api/send  { channel, text, image? (id from /api/upload) }
 export default route(async (req, res) => {
@@ -12,6 +13,10 @@ export default route(async (req, res) => {
   const text = String(body.text || '').trim().slice(0, 2000);
   const image = isImageId(body.image) ? body.image : null;
   if (!text && !image) return res.status(400).json({ error: 'Empty message' });
+  if (channel !== 'general' && !(await cmd('LRANGE', 'chat:channels', 0, -1)).includes(channel)) {
+    return res.status(404).json({ error: 'That channel was deleted' });
+  }
+  if (!canView(await getChannel(channel), user)) return res.status(403).json({ error: "You're not in this channel" });
 
   const msg = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),

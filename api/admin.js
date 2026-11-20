@@ -1,0 +1,49 @@
+import { cmd, pipeline, route, readBody } from './_store.js';
+import { requireUser, isStaff, userKey, cleanUsername, publicUser, saveUser } from './_auth.js';
+
+// GET  /api/admin  -> { users: [...], signupsOpen }
+// POST /api/admin  { action: "ban" | "unban" | "promote" | "demote", username }
+//                  { action: "signups", open: true | false }
+// Owner: everything. Admins: ban/unban regular members, open/close sign-ups.
+export default route(async (req, res) => {
+  const me = await requireUser(req, res);
+  if (!me) return;
+  if (!isStaff(me)) return res.status(403).json({ error: 'Admins only' });
+
+  if (req.method === 'POST') {
+    const b = readBody(req);
+
+    if (b.action === 'signups') {
+      await cmd('SET', 'chat:signups', b.open ? 'open' : 'closed');
+    } else {
+      const username = cleanUsername(b.username);
+      const raw = username && (await cmd('GET', userKey(username)));
+      if (!raw) return res.status(404).json({ error: 'No such user' });
+      const target = JSON.parse(raw);
+      if (target.username === me.username) return res.status(400).json({ error: "You can't do that to yourself" });
+      if (target.role === 'owner') return res.status(403).json({ error: "The owner can't be changed" });
+
+      if (b.action === 'ban' || b.action === 'unban') {
+        if (target.role === 'admin' && me.role !== 'owner') return res.status(403).json({ error: 'Only the owner can ban admins' });
+        target.banned = b.action === 'ban';
+        if (target.banned) target.role = null;
+      } else if (b.action === 'promote' || b.action === 'demote') {
+        if (me.role !== 'owner') return res.status(403).json({ error: 'Only the owner can change admins' });
+        if (target.banned) return res.status(400).json({ error: 'Unban them first' });
+        target.role = b.action === 'promote' ? 'admin' : null;
+      } else {
+        return res.status(400).json({ error: 'Unknown action' });
+      }
+      await saveUser(target);
+    }
+  }
+
+  const [names, signups] = await pipeline([['LRANGE', 'chat:userlist', 0, -1], ['GET', 'chat:signups']]);
+  const unique = [...new Set(names)];
+  const raws = unique.length ? (await pipeline([['MGET', ...unique.map(userKey)]]))[0] : [];
+  const users = raws.filter(Boolean).map((r) => {
+    const u = JSON.parse(r);
+    return { ...publicUser(u), banned: !!u.banned, created: u.created };
+  });
+  res.status(200).json({ users, signupsOpen: signups !== 'closed' });
+});

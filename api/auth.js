@@ -1,7 +1,7 @@
 import { cmd, pipeline, route, readBody, cleanDisplayName } from './_store.js';
 import {
   cleanUsername, hashPassword, verifyPassword, randomColor, createSession,
-  getToken, userKey, publicUser,
+  getToken, userKey, publicUser, saveUser, BANNED_MSG,
 } from './_auth.js';
 
 const MAX_FAILS = 10;           // failed logins per username...
@@ -23,6 +23,9 @@ export default route(async (req, res) => {
   const rawName = String(body.username || '').trim();
 
   if (action === 'register') {
+    if ((await cmd('GET', 'chat:signups')) === 'closed') {
+      return res.status(403).json({ error: 'Sign-ups are closed. Ask an admin.' });
+    }
     const username = cleanUsername(rawName);
     if (!username) return res.status(400).json({ error: 'Username must be 3-20 characters: letters, numbers, _ or .' });
     if (password.length < 6 || password.length > 100) return res.status(400).json({ error: 'Password must be at least 6 characters' });
@@ -32,11 +35,16 @@ export default route(async (req, res) => {
       displayName: cleanDisplayName(body.displayName) || rawName.slice(0, 20),
       color: randomColor(),
       avatar: null,
+      role: null,
+      banned: false,
       salt, hash,
       created: Date.now(),
     };
     const ok = await cmd('SET', userKey(username), JSON.stringify(user), 'NX');
     if (!ok) return res.status(409).json({ error: 'That username is taken' });
+    // The very first account on the server becomes the owner.
+    const [isFirst] = await pipeline([['SET', 'chat:owner', username, 'NX'], ['RPUSH', 'chat:userlist', username]]);
+    if (isFirst) { user.role = 'owner'; await saveUser(user); }
     const token = await createSession(username);
     return res.status(200).json({ token, user: publicUser(user) });
   }
@@ -53,6 +61,7 @@ export default route(async (req, res) => {
       return res.status(401).json({ error: 'Wrong username or password' });
     }
     await cmd('DEL', failKey);
+    if (user.banned) return res.status(403).json({ error: BANNED_MSG, banned: true });
     const token = await createSession(username);
     return res.status(200).json({ token, user: publicUser(user) });
   }

@@ -69,6 +69,11 @@ function memExec([op, key, ...args]) {
     case 'EXPIRE': mem.expires.set(key, Date.now() + +args[0] * 1000); return 1;
     case 'RPUSH': list().push(...args); return list().length;
     case 'LRANGE': { const l = list(); const [s, e] = range(args[0], args[1], l.length); return e > s ? l.slice(s, e) : []; }
+    case 'LREM': {
+      const l = list(); let n = 0; const max = +args[0] || Infinity;
+      mem.lists[key] = l.filter((v) => (v === args[1] && n < max ? (n++, false) : true));
+      return n;
+    }
     case 'LTRIM': { const l = list(); const [s, e] = range(args[0], args[1], l.length); mem.lists[key] = e > s ? l.slice(s, e) : []; return 'OK'; }
     case 'ZADD': zset().set(args[1], +args[0]); return 1;
     case 'ZREMRANGEBYSCORE': {
