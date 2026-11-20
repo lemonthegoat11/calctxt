@@ -5,7 +5,7 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 
 const PORT = process.env.PORT || 3000;
-const ROUTES = new Set(['poll', 'send', 'channels', 'auth', 'me', 'upload', 'img']);
+const ROUTES = new Set(['poll', 'send', 'channels', 'auth', 'me', 'upload', 'img', 'admin', 'delete']);
 const MAX_BODY = 5 * 1024 * 1024;
 
 http.createServer(async (req, res) => {

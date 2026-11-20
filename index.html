@@ -67,7 +67,14 @@
   .chan { display: flex; align-items: center; gap: 6px; width: 100%; padding: 6px 8px; margin: 1px 0; border-radius: 4px; color: var(--text-dim); font-size: 15px; text-align: left; }
   .chan:hover { background: var(--bg-hover); color: var(--text); }
   .chan.active { background: var(--bg-3); color: var(--text-bright); }
-  .chan .hash { font-size: 20px; opacity: .7; width: 20px; text-align: center; }
+  .chan .hash { font-size: 20px; opacity: .7; width: 20px; text-align: center; display: flex; justify-content: center; flex-shrink: 0; }
+  .chan { cursor: pointer; user-select: none; }
+  .chan .cname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .chan .gear { margin-left: auto; opacity: 0; color: var(--text-dim); display: flex; padding: 2px; border-radius: 3px; flex-shrink: 0; }
+  .chan:hover .gear, .chan.active .gear { opacity: 1; }
+  .chan .gear:hover { color: var(--text-bright); }
+  .chat-head h1 .topic { color: var(--text-dim); font-size: 14px; font-weight: 400; margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--bg-3); }
+  .chat-head h1 #chanHash { display: inline-flex; vertical-align: -2px; }
   .me { height: 52px; background: #232428; display: flex; align-items: center; gap: 8px; padding: 0 8px; }
   .me-click { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 4px; margin-left: -4px; border-radius: 4px; text-align: left; }
   .me-click:hover { background: var(--bg-hover); }
@@ -157,6 +164,33 @@
   .btn.red { background: none; color: #fa777c; padding-left: 0; }
   .btn.red:hover { text-decoration: underline; background: none; }
 
+  .badge { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: var(--accent); color: #fff; text-transform: uppercase; letter-spacing: .03em; align-self: center; flex-shrink: 0; }
+  .badge.owner { background: #f0b232; color: #000; }
+  .badge.banned { background: var(--red); }
+  .msg { position: relative; }
+  .msg-del { position: absolute; right: 16px; top: -10px; display: none; background: var(--bg-2); border: 1px solid var(--bg-0); border-radius: 4px; width: 32px; height: 28px; color: var(--text-dim); align-items: center; justify-content: center; z-index: 2; }
+  .msg:hover .msg-del { display: flex; }
+  .msg-del:hover { color: var(--red); }
+  .rail-btn.admin { color: #f0b232; }
+  .rail-btn.admin:hover { background: #f0b232; color: #000; }
+  .toggle-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px; background: var(--bg-1); border-radius: 6px; margin-bottom: 16px; }
+  .toggle-row b { color: var(--text-bright); font-size: 15px; display: block; }
+  .toggle-row small { color: var(--text-dim); font-size: 13px; }
+  .toggle-row input { width: 20px; height: 20px; accent-color: var(--green); flex-shrink: 0; }
+  .admin-list { max-height: 45vh; overflow-y: auto; margin: 0 -8px; }
+  .urow { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 4px; }
+  .urow:hover { background: var(--bg-hover); }
+  .urow .info { flex: 1; min-width: 0; }
+  .urow .info .top { display: flex; gap: 6px; align-items: center; }
+  .urow .info b { color: var(--text-bright); font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .urow .info small { color: var(--text-dim); font-size: 12px; }
+  .urow.is-banned .avatar { filter: grayscale(1); opacity: .6; }
+  .urow .acts { display: flex; gap: 6px; flex-shrink: 0; }
+  .mini { font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 4px; background: var(--bg-3); color: var(--text); }
+  .mini:hover { filter: brightness(1.2); }
+  .mini.red { background: #da373c; color: #fff; }
+  .mini.green { background: var(--green); color: #fff; }
+  .member.clickable { cursor: pointer; }
   .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.88); z-index: 70; display: flex; align-items: center; justify-content: center; padding: 24px; cursor: zoom-out; }
   .lightbox img { max-width: 100%; max-height: 100%; border-radius: 4px; }
   .scrim { display: none; }
@@ -234,6 +268,9 @@
       <button class="rail-btn" id="addChanRail" title="New channel">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M13 5h-2v6H5v2h6v6h2v-6h6v-2h-6z"/></svg>
       </button>
+      <button class="rail-btn admin hidden" id="adminBtn" title="Admin panel">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5zm-1 14-4-4 1.4-1.4L11 13.2l4.6-4.6L17 10z"/></svg>
+      </button>
       <button class="rail-btn lock" id="lockBtn" title="Lock (Esc)">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17 9V7A5 5 0 0 0 7 7v2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2zM9 7a3 3 0 0 1 6 0v2H9zm4 9.7V18h-2v-1.3a2 2 0 1 1 2 0z"/></svg>
       </button>
@@ -262,7 +299,10 @@
       <button class="icon-btn menu-btn" id="menuBtn" title="Channels">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
       </button>
-      <h1><span>#</span><b id="chanTitle">general</b></h1>
+      <h1><span id="chanHash">#</span><b id="chanTitle">general</b><span class="topic hidden" id="chanTopic"></span></h1>
+      <button class="icon-btn hidden" id="chanSettingsBtn" title="Channel settings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3h-4l-.4 2.7a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.2 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1L11 21h4l.4-2.7a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
+      </button>
       <button class="icon-btn" id="membersBtn" title="Members">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M14 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM2 20c0-3.3 3.6-6 8-6s8 2.7 8 6v1H2zm16-9.8a3 3 0 0 0 0-4.4 3 3 0 1 1 0 4.4zM20 21v-1c0-1.9-.8-3.6-2.1-4.9 2.5.5 4.1 2.2 4.1 4.9v1z"/></svg>
       </button>
@@ -340,9 +380,63 @@
       <p>Lowercase letters, numbers and dashes.</p>
       <label class="lbl" for="chanInput">Channel name</label>
       <input class="field" type="text" id="chanInput" maxlength="24" autocomplete="off" placeholder="new-channel" required>
+      <label class="toggle-row" for="chanPrivate">
+        <span><b>Private channel</b><small>Only people you add can see it.</small></span>
+        <input type="checkbox" id="chanPrivate">
+      </label>
     </div>
     <div class="modal-foot"><button class="btn ghost" type="button" id="chanCancel">Cancel</button><button class="btn" type="submit">Create</button></div>
   </form>
+</div>
+
+<!-- channel settings -->
+<div class="modal-wrap hidden" id="csModal">
+  <form class="modal" id="csForm">
+    <div class="modal-inner">
+      <h2 id="csTitle">Channel settings</h2>
+      <p id="csSub">Only you and server admins can change these.</p>
+      <label class="lbl" for="csTopic">Topic</label>
+      <input class="field" id="csTopic" maxlength="120" autocomplete="off" placeholder="What's this channel about?">
+      <label class="toggle-row" for="csPrivate" id="csPrivateRow">
+        <span><b>Private channel</b><small>Only the people below (plus server admins) can see it.</small></span>
+        <input type="checkbox" id="csPrivate">
+      </label>
+      <div id="csMembersWrap">
+        <label class="lbl" for="csAddInput">Members</label>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input class="field" id="csAddInput" list="csUserList" placeholder="Add by username" autocomplete="off" autocapitalize="none" spellcheck="false" style="margin:0">
+          <button type="button" class="btn" id="csAddBtn">Add</button>
+        </div>
+        <datalist id="csUserList"></datalist>
+        <div class="admin-list" id="csMembers"></div>
+      </div>
+      <div class="err" id="csErr"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn red" type="button" id="csDelete">Delete channel</button>
+      <span class="spacer"></span>
+      <button class="btn ghost" type="button" id="csCancel">Close</button>
+      <button class="btn" type="submit">Save</button>
+    </div>
+  </form>
+</div>
+
+<!-- admin panel -->
+<div class="modal-wrap hidden" id="adminModal">
+  <div class="modal">
+    <div class="modal-inner">
+      <h2>Admin Panel</h2>
+      <p>Ban members, choose admins, and control sign-ups.</p>
+      <label class="toggle-row" for="signupToggle">
+        <span><b>Allow new sign-ups</b><small>Turn off to stop banned people making new accounts.</small></span>
+        <input type="checkbox" id="signupToggle">
+      </label>
+      <input class="field" id="userSearch" placeholder="Search members" autocomplete="off">
+      <div class="admin-list" id="adminList"></div>
+      <div class="err" id="adminErr"></div>
+    </div>
+    <div class="modal-foot"><button class="btn" type="button" id="adminClose">Done</button></div>
+  </div>
 </div>
 
 <div class="lightbox hidden" id="lightbox"><img id="lightboxImg" alt=""></div>
@@ -468,6 +562,7 @@
     }
     const data = await r.json().catch(() => ({ error: 'Server returned an invalid response' }));
     if (r.status === 401 && token && path !== '/api/auth') { signedOut(); throw new Error('Logged out'); }
+    if (data.banned && path !== '/api/auth') { signedOut(); $('authErr').textContent = data.error; throw new Error('Logged out'); }
     if (!r.ok || data.error) throw new Error(data.error || 'Request failed');
     return data;
   }
@@ -657,6 +752,14 @@
     $('meName').textContent = me.displayName;
     $('meUser').textContent = '@' + me.username;
     setAvatar($('meAvatar'), me);
+    $('adminBtn').classList.toggle('hidden', !isStaff(me));
+  }
+  const isStaff = (u) => !!u && (u.role === 'owner' || u.role === 'admin');
+  function badgeEl(role) {
+    const b = document.createElement('span');
+    b.className = 'badge ' + role;
+    b.textContent = role;
+    return b;
   }
 
   function renderSwatches() {
@@ -737,7 +840,11 @@
      CHAT
      ===================================================== */
   let channel = store.get('calc.ch') || 'general';
-  let channels = ['general'];
+  let channels = [{ name: 'general', private: false, topic: '', members: [], canManage: false }];
+  const chanInfo = (name) => channels.find((c) => c.name === name);
+  const LOCK_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17 9V7A5 5 0 0 0 7 7v2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2zM9 7a3 3 0 0 1 6 0v2H9z"/></svg>';
+  const GEAR_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3h-4l-.4 2.7a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.2 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1L11 21h4l.4-2.7a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>';
+  let bannerUntil = 0;
   let messages = [];
   const seen = new Set();
   const users = {};
@@ -761,15 +868,30 @@
     const forChannel = channel;
     try {
       const data = await api('/api/poll?' + new URLSearchParams({ channel: forChannel, after: String(lastTs) }));
-      showBanner('');
+      if (Date.now() > bannerUntil) showBanner('');
       if (!unlocked || forChannel !== channel) return;
-      if (JSON.stringify(data.channels) !== JSON.stringify(channels)) { channels = data.channels; renderChannels(); }
       let profilesChanged = false;
       for (const [name, p] of Object.entries(data.users || {})) {
         if (JSON.stringify(users[name]) !== JSON.stringify(p)) { users[name] = p; profilesChanged = true; }
       }
+      if (JSON.stringify(data.channels) !== JSON.stringify(channels)) {
+        channels = data.channels;
+        renderChannels(); renderHeader(); profilesChanged = true;
+        if (!$('csModal').classList.contains('hidden')) renderChanSettings();
+      }
+      if (data.noAccess && channel !== 'general') {
+        const gone = channel;
+        switchChannel('general');
+        showBanner(`#${gone} was deleted or you were removed from it.`, 5000);
+        return;
+      }
       if (me && users[me.username]) { me = users[me.username]; renderMe(); }
-      if (!addMessages(data.messages) && profilesChanged) renderMessages();
+      const added = addMessages(data.messages);
+      // drop messages that were deleted (small time margin avoids racing with brand-new sends)
+      const alive = new Set(data.ids || []);
+      const before = messages.length;
+      messages = messages.filter((m) => m.pending || m.ts < (data.oldest || 0) || m.ts > data.now - 3000 || alive.has(m.id));
+      if ((!added && profilesChanged) || messages.length !== before) renderMessages();
       renderMembers(data.online);
     } catch (err) {
       if (err.message !== 'Logged out') showBanner(err.message);
@@ -778,7 +900,8 @@
     }
   }
 
-  function showBanner(text) {
+  function showBanner(text, holdMs = 0) {
+    bannerUntil = holdMs ? Date.now() + holdMs : 0;
     $('banner').textContent = text;
     $('banner').classList.toggle('hidden', !text);
   }
@@ -848,7 +971,16 @@
         setAvatar(row.querySelector('.avatar'), p);
         const u = row.querySelector('.msg-user');
         u.textContent = p.displayName; u.style.color = p.color; u.title = '@' + p.username;
+        if (p.role) u.after(badgeEl(p.role));
         row.querySelector('.msg-time').textContent = timeStr(m.ts);
+      }
+      if (!m.pending && me && (m.user === me.username || chanInfo(channel)?.canManage)) {
+        const del = document.createElement('button');
+        del.className = 'msg-del';
+        del.title = 'Delete message';
+        del.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9 3h6l1 2h4v2H4V5h4zm-3 6h12l-1 12H7z"/></svg>';
+        del.onclick = () => deleteMessage(m);
+        row.appendChild(del);
       }
       row.querySelector('.msg-text').innerHTML = formatText(m.text || '');
       if (m.image || m.localImage) {
@@ -869,6 +1001,88 @@
     if (keep) scrollToBottom();
   }
 
+  async function deleteMessage(m) {
+    if (!confirm('Delete this message?')) return;
+    try {
+      await api('/api/delete', { method: 'POST', body: { channel, id: m.id } });
+      messages = messages.filter((x) => x.id !== m.id);
+      renderMessages();
+    } catch (err) {
+      if (err.message !== 'Logged out') showBanner(err.message);
+    }
+  }
+
+  /* ---------- admin panel ---------- */
+  let adminData = null;
+
+  async function openAdmin(search = '') {
+    if (!isStaff(me)) return;
+    $('adminErr').textContent = '';
+    $('userSearch').value = search;
+    $('adminList').innerHTML = '';
+    $('adminModal').classList.remove('hidden');
+    closeNav();
+    await adminCall();
+  }
+
+  async function adminCall(body) {
+    $('adminErr').textContent = '';
+    try {
+      adminData = await api('/api/admin', body ? { method: 'POST', body } : {});
+      for (const u of adminData.users) {
+        const { banned, created, ...pub } = u;
+        users[u.username] = pub;
+      }
+    } catch (err) {
+      $('adminErr').textContent = err.message;
+    }
+    renderAdmin();
+  }
+
+  function renderAdmin() {
+    if (!adminData) return;
+    $('signupToggle').checked = adminData.signupsOpen;
+    const q = $('userSearch').value.trim().toLowerCase();
+    const rank = (u) => (u.banned ? 3 : u.role === 'owner' ? 0 : u.role === 'admin' ? 1 : 2);
+    const list = adminData.users
+      .filter((u) => !q || u.username.includes(q) || u.displayName.toLowerCase().includes(q))
+      .sort((a, b) => rank(a) - rank(b) || a.displayName.localeCompare(b.displayName));
+    const el = $('adminList');
+    el.innerHTML = '';
+    if (!list.length) { el.innerHTML = '<p style="margin:12px 0">No members found.</p>'; return; }
+    for (const u of list) {
+      const row = document.createElement('div');
+      row.className = 'urow' + (u.banned ? ' is-banned' : '');
+      row.innerHTML = '<div class="avatar sm"></div><div class="info"><div class="top"><b></b></div><small></small></div><div class="acts"></div>';
+      setAvatar(row.querySelector('.avatar'), u);
+      row.querySelector('b').textContent = u.displayName;
+      if (u.role) row.querySelector('.top').appendChild(badgeEl(u.role));
+      if (u.banned) row.querySelector('.top').appendChild(badgeEl('banned'));
+      row.querySelector('small').textContent = '@' + u.username + (u.username === me.username ? ' (you)' : '');
+      const acts = row.querySelector('.acts');
+      const btn = (label, cls, fn) => { const b = document.createElement('button'); b.className = 'mini ' + cls; b.textContent = label; b.onclick = fn; acts.appendChild(b); };
+      const canTouch = u.username !== me.username && u.role !== 'owner';
+      if (canTouch && me.role === 'owner' && !u.banned) {
+        if (u.role === 'admin') btn('Remove admin', '', () => adminCall({ action: 'demote', username: u.username }));
+        else btn('Make admin', '', () => adminCall({ action: 'promote', username: u.username }));
+      }
+      if (canTouch && (u.role !== 'admin' || me.role === 'owner')) {
+        if (u.banned) btn('Unban', 'green', () => adminCall({ action: 'unban', username: u.username }));
+        else btn('Ban', 'red', () => {
+          if (confirm(`Ban ${u.displayName} (@${u.username})?\n\nThey get kicked out right away and can't log back in.`)) {
+            adminCall({ action: 'ban', username: u.username });
+          }
+        });
+      }
+      el.appendChild(row);
+    }
+  }
+
+  $('adminBtn').onclick = () => openAdmin();
+  $('adminClose').onclick = () => $('adminModal').classList.add('hidden');
+  $('userSearch').addEventListener('input', renderAdmin);
+  $('signupToggle').addEventListener('change', () => adminCall({ action: 'signups', open: $('signupToggle').checked }));
+
   function openLightbox(src) {
     $('lightboxImg').src = src;
     $('lightbox').classList.remove('hidden');
@@ -879,13 +1093,32 @@
     const list = $('chanList');
     list.innerHTML = '';
     channels.forEach((c) => {
-      const b = document.createElement('button');
-      b.className = 'chan' + (c === channel ? ' active' : '');
-      b.innerHTML = '<span class="hash">#</span><span></span>';
-      b.lastChild.textContent = c;
-      b.onclick = () => { switchChannel(c); closeNav(); };
+      const b = document.createElement('div');
+      b.className = 'chan' + (c.name === channel ? ' active' : '');
+      b.setAttribute('role', 'button');
+      b.tabIndex = 0;
+      b.title = c.private ? 'Private channel' : '';
+      b.innerHTML = `<span class="hash">${c.private ? LOCK_SVG : '#'}</span><span class="cname"></span>`;
+      b.querySelector('.cname').textContent = c.name;
+      if (c.canManage) {
+        const g = document.createElement('button');
+        g.className = 'gear'; g.title = 'Channel settings'; g.innerHTML = GEAR_SVG;
+        g.onclick = (e) => { e.stopPropagation(); openChanSettings(c.name); };
+        b.appendChild(g);
+      }
+      b.onclick = () => { switchChannel(c.name); closeNav(); };
+      b.onkeydown = (e) => { if (e.key === 'Enter') b.click(); };
       list.appendChild(b);
     });
+  }
+
+  function renderHeader() {
+    const c = chanInfo(channel) || { private: false, topic: '', canManage: false };
+    $('chanHash').innerHTML = c.private ? LOCK_SVG : '#';
+    $('chanTitle').textContent = channel;
+    $('chanTopic').textContent = c.topic || '';
+    $('chanTopic').classList.toggle('hidden', !c.topic);
+    $('chanSettingsBtn').classList.toggle('hidden', !c.canManage);
   }
 
   function renderMembers(online) {
@@ -901,6 +1134,11 @@
       row.innerHTML = '<div class="avatar sm online"></div><span class="name"></span>';
       setAvatar(row.firstChild, p);
       row.lastChild.textContent = p.displayName;
+      if (p.role) row.appendChild(badgeEl(p.role));
+      if (isStaff(me) && p.username !== me.username) {
+        row.classList.add('clickable');
+        row.onclick = () => openAdmin(p.username);
+      }
       list.appendChild(row);
     });
   }
@@ -910,8 +1148,8 @@
     channel = c;
     store.set('calc.ch', c);
     messages = []; seen.clear(); lastTs = 0; stick = true;
-    $('chanTitle').textContent = c;
     $('input').placeholder = `Message #${c}`;
+    renderHeader();
     renderChannels();
     renderMessages();
     poll();
@@ -989,20 +1227,137 @@
   });
 
   /* ---------- channels ---------- */
-  function openChanModal() { $('chanInput').value = ''; $('chanModal').classList.remove('hidden'); setTimeout(() => $('chanInput').focus(), 50); }
+  function openChanModal() {
+    $('chanInput').value = ''; $('chanPrivate').checked = false;
+    $('chanModal').classList.remove('hidden');
+    closeNav();
+    setTimeout(() => $('chanInput').focus(), 50);
+  }
   $('addChan').onclick = openChanModal;
   $('addChanRail').onclick = openChanModal;
   $('chanCancel').onclick = () => $('chanModal').classList.add('hidden');
   $('chanForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
-      const data = await api('/api/channels', { method: 'POST', body: { name: $('chanInput').value } });
+      const { channel: c } = await api('/api/channels', {
+        method: 'POST',
+        body: { action: 'create', name: $('chanInput').value, private: $('chanPrivate').checked },
+      });
       $('chanModal').classList.add('hidden');
-      if (!channels.includes(data.channel)) channels.push(data.channel);
-      switchChannel(data.channel);
-      closeNav();
-    } catch (err) { alert(err.message); }
+      if (!chanInfo(c.name)) channels.push(c);
+      switchChannel(c.name);
+      if (c.private) openChanSettings(c.name); // go straight to adding people
+    } catch (err) { if (err.message !== 'Logged out') alert(err.message); }
   });
+
+  /* ---------- channel settings ---------- */
+  let csName = null;
+  let allUsers = [];
+
+  async function openChanSettings(name) {
+    const c = chanInfo(name);
+    if (!c || !c.canManage) return;
+    csName = name;
+    $('csErr').textContent = '';
+    $('csTopic').value = c.topic || '';
+    $('csAddInput').value = '';
+    renderChanSettings();
+    $('csModal').classList.remove('hidden');
+    closeNav();
+    try {
+      allUsers = (await api('/api/channels')).users;
+      for (const u of allUsers) users[u.username] ||= u;
+      renderChanSettings();
+    } catch {}
+  }
+
+  function renderChanSettings() {
+    const c = chanInfo(csName);
+    if (!c || !c.canManage) { $('csModal').classList.add('hidden'); return; }
+    $('csTitle').textContent = `#${c.name} settings`;
+    $('csPrivate').checked = c.private;
+    $('csPrivateRow').classList.toggle('hidden', c.name === 'general');
+    $('csDelete').classList.toggle('hidden', c.name === 'general');
+    $('csMembersWrap').classList.toggle('hidden', !c.private);
+
+    const inChannel = new Set([c.owner, ...c.members]);
+    $('csUserList').innerHTML = '';
+    allUsers.filter((u) => !inChannel.has(u.username)).forEach((u) => {
+      const o = document.createElement('option');
+      o.value = u.username;
+      o.label = u.displayName;
+      $('csUserList').appendChild(o);
+    });
+
+    const list = $('csMembers');
+    list.innerHTML = '';
+    const rows = [c.owner, ...c.members].filter(Boolean);
+    if (!c.members.length) {
+      const p = document.createElement('p');
+      p.style.margin = '4px 0 8px';
+      p.textContent = 'No one added yet. Type a username above.';
+      list.appendChild(p);
+    }
+    rows.forEach((name) => {
+      const u = users[name] || { username: name, displayName: name };
+      const row = document.createElement('div');
+      row.className = 'urow';
+      row.innerHTML = '<div class="avatar sm"></div><div class="info"><div class="top"><b></b></div><small></small></div><div class="acts"></div>';
+      setAvatar(row.querySelector('.avatar'), u);
+      row.querySelector('b').textContent = u.displayName;
+      row.querySelector('small').textContent = '@' + name;
+      if (name === c.owner) {
+        const tag = badgeEl('owner'); tag.textContent = 'creator';
+        row.querySelector('.top').appendChild(tag);
+      } else {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'mini'; b.textContent = 'Remove';
+        b.onclick = () => chanUpdate({ remove: [name] });
+        row.querySelector('.acts').appendChild(b);
+      }
+      list.appendChild(row);
+    });
+  }
+
+  async function chanUpdate(body) {
+    $('csErr').textContent = '';
+    try {
+      const { channel: c } = await api('/api/channels', { method: 'POST', body: { action: 'update', name: csName, ...body } });
+      const i = channels.findIndex((x) => x.name === c.name);
+      if (i >= 0) channels[i] = c;
+      renderChannels(); renderHeader(); renderChanSettings();
+      return true;
+    } catch (err) {
+      if (err.message !== 'Logged out') $('csErr').textContent = err.message;
+      renderChanSettings();
+      return false;
+    }
+  }
+
+  async function addMember() {
+    const name = $('csAddInput').value.trim().replace(/^@/, '').toLowerCase();
+    if (!name) return;
+    if (await chanUpdate({ add: [name] })) $('csAddInput').value = '';
+  }
+  $('csAddBtn').onclick = addMember;
+  $('csAddInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addMember(); } });
+  $('csPrivate').addEventListener('change', () => chanUpdate({ private: $('csPrivate').checked }));
+  $('csCancel').onclick = () => $('csModal').classList.add('hidden');
+  $('chanSettingsBtn').onclick = () => openChanSettings(channel);
+  $('csForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (await chanUpdate({ topic: $('csTopic').value })) $('csModal').classList.add('hidden');
+  });
+  $('csDelete').onclick = async () => {
+    const name = csName;
+    if (!confirm(`Delete #${name}?\n\nAll of its messages will be gone for good.`)) return;
+    try {
+      await api('/api/channels', { method: 'POST', body: { action: 'delete', name } });
+      channels = channels.filter((c) => c.name !== name);
+      $('csModal').classList.add('hidden');
+      if (channel === name) switchChannel('general'); else renderChannels();
+    } catch (err) { if (err.message !== 'Logged out') $('csErr').textContent = err.message; }
+  };
 
   /* ---------- layout ---------- */
   function closeNav() { $('nav').classList.remove('open'); $('scrim').classList.remove('show'); }

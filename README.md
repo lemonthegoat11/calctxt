@@ -1,56 +1,86 @@
 # Calculator (secretly a chat app)
 
 Opens as a normal working calculator. Type **111+111** and press **=** to unlock a
-Discord-style group chat with channels, online list and live messages.
+Discord-style group chat.
 
-- **Lock it again:** press **Esc**, or the red lock button at the bottom-left. The chat is wiped from the screen and the calculator comes back.
+**Features:** accounts (username + password), profile pictures, display names and name colors,
+photo attachments (button, paste or drag-and-drop), channels, an online list, and live messages.
+
+- **Lock it again:** press **Esc**, or the red lock button at the bottom-left. The chat is wiped from the screen and the calculator comes back. You stay logged in, so next time 111+111 takes you straight back in.
+- **Log out / change password:** click your name at the bottom-left.
 - The tab title and icon always say "Calculator".
 
-## Deploy to Render (no Vercel needed)
+## Moderation
+
+- **The first account ever made on the server is the owner.** Make yours first right after deploying.
+- The owner and admins get a gold shield button on the left. It opens the **Admin Panel**:
+  - **Ban / Unban** anyone. Banned people are kicked out within seconds and can't log back in.
+  - **Make admin / Remove admin** (owner only). Admins can ban regular members; only the owner can ban admins. Nobody can ban the owner.
+  - **Allow new sign-ups** switch: turn it off so banned people can't just make a new account.
+- Click someone in the Online list to jump to them in the Admin Panel.
+- Hover a message for the trash button. Anyone can delete their own messages; channel managers and admins can delete any message in that channel.
+
+## Channels
+
+- Anyone can create a channel with **+**. Tick **Private channel** to make it invite-only.
+- Whoever creates a channel manages it: hover it and click the gear (or the gear in the top bar) to
+  set a topic, add or remove people, switch private on/off, or delete it.
+- Private channels are hidden from everyone who isn't in them, except the server owner and admins (so they can moderate).
+- `#general` is always public and only the owner/admins can change it.
+
+## Deploy to Render
 
 1. Put this folder in a GitHub repo.
 2. On render.com: **New → Web Service**, connect the repo.
    - Runtime: **Node** · Build command: `npm install` · Start command: `npm start` · Instance type: **Free**
-3. Deploy. You get a URL like `https://your-app.onrender.com`.
-4. (Recommended) Make messages permanent: sign up free at upstash.com, create a **Redis** database, then copy its
+3. **Required for accounts to last:** sign up free at upstash.com, create a **Redis** database, then copy its
    **REST URL** and **REST token** into Render → your service → **Environment** as
-   `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. Render redeploys automatically.
+   `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
+4. Deploy. You get a URL like `https://your-app.onrender.com`.
 
-Without step 4 it still works, but messages are kept in memory and get wiped whenever the server restarts.
+Without step 3, everything (accounts, messages, photos) is kept in memory and wiped whenever the server restarts.
 Render's free tier sleeps after ~15 min with no visitors and takes ~30-60 s to wake up on the next visit.
 
 ## Deploy to Vercel
 
-1. Put this folder in a GitHub repo (or run `npx vercel` inside it).
-2. On vercel.com: **Add New → Project**, import the repo, keep the default settings (no framework, no build command), deploy.
-3. In the project, open the **Storage** tab → **Create Database** → pick **Upstash for Redis** (free tier works) → connect it to the project.
-   This adds the `KV_REST_API_URL` / `KV_REST_API_TOKEN` env vars automatically.
-4. **Redeploy** (Deployments → ⋯ → Redeploy) so the functions pick up the env vars.
-
-Without step 3 the chat shows a red "Database not connected" banner.
+1. Import the repo on vercel.com with default settings.
+2. **Storage** tab → **Create Database** → **Upstash for Redis** → connect it to the project.
+3. Redeploy.
 
 ## Run locally
 
 Requires Node 18+.
 
 ```bash
-npm run dev
+npm start
 ```
 
-Open http://localhost:3000. Locally, messages live in memory and are lost when the server stops.
+Open http://localhost:3000.
 
 ## Files
 
 | File | What it does |
 | --- | --- |
-| `index.html` | Calculator disguise + the whole chat UI |
-| `api/poll.js` | Returns new messages, channel list, who's online (polled every 2s) |
+| `index.html` | Calculator disguise + login screen + the whole chat UI |
+| `api/auth.js` | Register / log in / log out |
+| `api/me.js` | Get or update your profile (name, color, picture, password) |
+| `api/upload.js` | Uploads a photo (shrunk in the browser first) |
+| `api/img.js` | Serves uploaded photos |
+| `api/poll.js` | New messages, channels, who's online, profiles (polled every 2s) |
 | `api/send.js` | Posts a message |
-| `api/channels.js` | Creates a channel |
-| `api/_store.js` | Redis (Upstash REST) helper, with an in-memory fallback for local dev |
+| `api/channels.js` | Create / update / delete channels, manage members |
+| `api/admin.js` | Admin Panel: bans, admins, sign-up switch |
+| `api/delete.js` | Deletes a message |
+| `api/_channels.js` | Channel settings and who can see/manage them |
+| `api/_auth.js` | Password hashing (scrypt) and login sessions |
+| `api/_store.js` | Redis (Upstash REST) helper, with an in-memory fallback |
+| `dev-server.js` | The server `npm start` runs (used locally and on Render) |
 
 ## Things to know
 
-- **Changing the code:** edit `const SECRET = '111+111'` in `index.html`.
-- **Not real security.** The unlock code is in the page source, and anyone who finds the URL can call the API. There are no accounts or passwords: anyone can pick any display name. Don't share anything truly sensitive.
+- **Changing the unlock code:** edit `const SECRET = '111+111'` in `index.html`.
+- **The disguise isn't secret.** The unlock code is in the page source. Accounts protect the chat itself: you have to log in to read or post.
+- **Anyone who finds the URL can make an account.** There's no invite system.
+- **Photos:** shrunk to max 1600px before upload, avatars to 256px. Anyone with a photo's link can view it (links are random and unguessable). Upstash's free plan holds 256 MB, roughly 1,000+ photos.
+- **Passwords** are hashed with scrypt. After 10 wrong attempts, logging in to that username is blocked for 15 minutes. There's no "forgot password", so don't forget it.
 - Keeps the last 500 messages per channel and up to 50 channels.
