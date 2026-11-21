@@ -64,59 +64,37 @@ export async function getSessionUser(req) {
 export const BANNED_MSG = 'You have been banned from this server.';
 export const isStaff = (u) => u && (u.role === 'owner' || u.role === 'admin');
 
-/* ---------- IP + device bans ----------
+/* ---------- device bans ----------
    Browsers can't read real hardware IDs, so a "device" is a random ID the page keeps in
-   localStorage + a cookie and sends as X-Device. IPs are stored hashed, never shown. */
-export function clientIp(req) {
-  const h = req.headers;
-  const ip = h['cf-connecting-ip'] || h['true-client-ip'] || String(h['x-forwarded-for'] || '').split(',')[0].trim()
-    || req.socket?.remoteAddress || '';
-  return String(ip).replace(/^::ffff:/, '');
-}
+   localStorage + a cookie and sends as X-Device. IP addresses are not used or stored. */
 export function deviceId(req) {
   const d = String(req.headers['x-device'] || '').toLowerCase();
   return /^[a-f0-9]{32}$/.test(d) ? d : null;
 }
-const ipKey = (ip) => 'chat:bip:' + crypto.createHash('sha256').update('calc-ip:' + ip).digest('hex').slice(0, 32);
 const devKey = (d) => 'chat:bdev:' + d;
 
-// Ban keys for this request's IP and device.
-export function requestBanKeys(req) {
-  const keys = [];
-  const ip = clientIp(req);
-  if (ip) keys.push(ipKey(ip));
-  const d = deviceId(req);
-  if (d) keys.push(devKey(d));
-  return keys;
-}
-
-// True if this request comes from an IP or device that's banned.
+// True if this request comes from a device that's banned.
 export async function isBlocked(req) {
-  const keys = requestBanKeys(req);
-  if (!keys.length) return false;
-  const hits = await cmd('MGET', ...keys);
-  return hits.some(Boolean);
+  const d = deviceId(req);
+  if (!d) return false;
+  return !!(await cmd('GET', devKey(d)));
 }
 
-// Remember the last few IPs/devices a user used, so they can be IP/device banned later.
+// Remember the last few devices a user used, so they can be device banned later.
 export async function trackUser(user, req) {
-  const ip = clientIp(req);
   const d = deviceId(req);
-  const ips = user.seenIps || [];
   const devs = user.seenDevices || [];
-  const k = ip && ipKey(ip);
-  let changed = false;
-  if (k && !ips.includes(k)) { ips.unshift(k); changed = true; }
-  if (d && !devs.includes(d)) { devs.unshift(d); changed = true; }
-  if (!changed) return;
-  user.seenIps = ips.slice(0, 5);
+  const hadIps = 'seenIps' in user; // left over from the old IP bans: drop it
+  if ((!d || devs.includes(d)) && !hadIps) return;
+  if (d && !devs.includes(d)) devs.unshift(d);
   user.seenDevices = devs.slice(0, 5);
+  delete user.seenIps;
   await saveUser(user);
 }
 
-// Keys to write for an IP/device ban of this user.
+// Keys to write for a device ban of this user.
 export function userBanKeys(user) {
-  return [...(user.seenIps || []), ...(user.seenDevices || []).map(devKey)];
+  return (user.seenDevices || []).map(devKey);
 }
 
 /* ---------- applications ----------
@@ -138,7 +116,7 @@ export async function requireUser(req, res, { allowPending = false } = {}) {
   const user = await getSessionUser(req);
   if (!user) { res.status(401).json({ error: 'Not logged in' }); return null; }
   if (user.banned) { res.status(403).json({ error: BANNED_MSG, banned: true }); return null; }
-  // Staff are never locked out by an IP/device ban (e.g. you share Wi-Fi with someone you banned).
+  // Staff are never locked out by a device ban (e.g. you shared a computer with someone you banned).
   if (!isStaff(user) && (await isBlocked(req))) { res.status(403).json({ error: BANNED_MSG, banned: true }); return null; }
   const status = statusOf(user);
   if (status !== 'approved' && !allowPending) {

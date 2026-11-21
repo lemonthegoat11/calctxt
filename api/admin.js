@@ -25,7 +25,7 @@ export default route(async (req, res) => {
 
       if (b.action === 'ban' || b.action === 'unban') {
         if (target.role === 'admin' && me.role !== 'owner') return res.status(403).json({ error: 'Only the owner can ban admins' });
-        // Lift any old IP/device ban first (only keys that still point at this user).
+        // Lift any old device (or old-style IP) ban first (only keys that still point at this user).
         const oldKeys = target.banKeys || [];
         if (oldKeys.length) {
           const owners = await cmd('MGET', ...oldKeys);
@@ -40,7 +40,7 @@ export default route(async (req, res) => {
           await cmd('SREM', 'chat:pending', target.username);
           target.banType = 'normal';
           if (b.mode === 'device') {
-            // Block every IP + device they've recently used, so new accounts from there are blocked too.
+            // Block every device they've recently used, so new accounts from there are blocked too.
             const keys = userBanKeys(target);
             if (keys.length) await pipeline(keys.map((k) => ['SET', k, target.username]));
             target.banKeys = keys;
