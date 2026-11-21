@@ -1,5 +1,5 @@
 import { pipeline, route, cleanChannel, parseList, ONLINE_WINDOW_MS } from './_store.js';
-import { requireUser, userKey, publicUser, parseUser } from './_auth.js';
+import { requireUser, userKey, publicUser, parseUser, isStaff } from './_auth.js';
 import { parseChannel, canView, channelInfo } from './_channels.js';
 import { MAIN, MAIN_SERVER, loadServer, chanListKey, chanKey, msgsKey, memKey, serverInfo, userServers } from './_servers.js';
 
@@ -58,6 +58,7 @@ export default route(async (req, res) => {
     users,
     now,
   };
+  if (isStaff(me)) body.pendingApps = (await pipeline([['SCARD', 'chat:pending']]))[0] || 0;
   if (req.query.rail) {
     body.servers = [serverInfo(MAIN_SERVER, me), ...(await userServers(me.username)).map((s) => serverInfo(s, me))];
   }

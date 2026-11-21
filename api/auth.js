@@ -2,7 +2,7 @@ import { cmd, pipeline, route, readBody, cleanDisplayName } from './_store.js';
 import {
   cleanUsername, hashPassword, verifyPassword, randomColor, createSession,
   getToken, userKey, publicUser, saveUser, BANNED_MSG, parseUser, applyOwner,
-  isBlocked, trackUser, isStaff,
+  isBlocked, trackUser, isStaff, meView,
 } from './_auth.js';
 
 const MAX_FAILS = 10;           // failed logins per username...
@@ -39,6 +39,8 @@ export default route(async (req, res) => {
       avatar: null,
       role: null,
       banned: false,
+      status: 'pending', // must fill out an application (see /api/apply)
+      application: null,
       salt, hash,
       created: Date.now(),
     };
@@ -46,11 +48,11 @@ export default route(async (req, res) => {
     if (!ok) return res.status(409).json({ error: 'That username is taken' });
     // The very first account on the server becomes the owner.
     const [isFirst] = await pipeline([['SET', 'chat:owner', username, 'NX'], ['RPUSH', 'chat:userlist', username]]);
-    if (isFirst) { user.role = 'owner'; await saveUser(user); }
+    if (isFirst) { user.role = 'owner'; user.status = 'approved'; await saveUser(user); }
     applyOwner(user);
     await trackUser(user, req);
     const token = await createSession(username);
-    return res.status(200).json({ token, user: publicUser(user) });
+    return res.status(200).json({ token, user: meView(user) });
   }
 
   if (action === 'login') {
@@ -69,7 +71,7 @@ export default route(async (req, res) => {
     if (!isStaff(user) && (await isBlocked(req))) return res.status(403).json({ error: BANNED_MSG, banned: true });
     await trackUser(user, req);
     const token = await createSession(username);
-    return res.status(200).json({ token, user: publicUser(user) });
+    return res.status(200).json({ token, user: meView(user) });
   }
 
   res.status(400).json({ error: 'Unknown action' });

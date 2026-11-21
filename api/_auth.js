@@ -119,13 +119,35 @@ export function userBanKeys(user) {
   return [...(user.seenIps || []), ...(user.seenDevices || []).map(devKey)];
 }
 
+/* ---------- applications ----------
+   New accounts start "pending" and must fill out an application that an admin approves.
+   Accounts from before this feature have no status and count as approved. Staff are always approved. */
+export function statusOf(user) {
+  if (isStaff(user)) return 'approved';
+  return user.status || 'approved';
+}
+
+// What the logged-in user gets back about themselves.
+export function meView(u) {
+  return { ...fullProfile(u), status: statusOf(u), applied: !!u.application };
+}
+
 // Returns the logged-in user, or sends 401/403 and returns null.
-export async function requireUser(req, res) {
+// allowPending: let not-yet-approved users through (only for /api/me and /api/apply).
+export async function requireUser(req, res, { allowPending = false } = {}) {
   const user = await getSessionUser(req);
   if (!user) { res.status(401).json({ error: 'Not logged in' }); return null; }
   if (user.banned) { res.status(403).json({ error: BANNED_MSG, banned: true }); return null; }
   // Staff are never locked out by an IP/device ban (e.g. you share Wi-Fi with someone you banned).
   if (!isStaff(user) && (await isBlocked(req))) { res.status(403).json({ error: BANNED_MSG, banned: true }); return null; }
+  const status = statusOf(user);
+  if (status !== 'approved' && !allowPending) {
+    res.status(403).json({
+      error: status === 'denied' ? 'Your application was denied.' : 'Your application is waiting for approval.',
+      pending: true, status, applied: !!user.application,
+    });
+    return null;
+  }
   await trackUser(user, req);
   return user;
 }

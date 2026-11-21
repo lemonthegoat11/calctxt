@@ -1,14 +1,17 @@
 import { cmd, route, readBody, cleanDisplayName, cleanColor, isImageId } from './_store.js';
 import {
-  requireUser, saveUser, fullProfile, hashPassword, verifyPassword, cleanUsername, userKey, parseUser, cleanBio,
+  requireUser, saveUser, fullProfile, hashPassword, verifyPassword, cleanUsername, userKey, parseUser, cleanBio, meView,
 } from './_auth.js';
 
 // GET  /api/me           -> your profile
 // GET  /api/me?u=name    -> someone else's profile (name, picture, bio, member since)
 // POST /api/me  { displayName?, color?, avatar? (image id or null), bio?, currentPassword?, newPassword? }
 export default route(async (req, res) => {
-  const user = await requireUser(req, res);
+  // Not-yet-approved users may read their own status (GET /api/me) but nothing else.
+  const ownOnly = req.method === 'GET' && !req.query?.u;
+  const user = await requireUser(req, res, { allowPending: ownOnly });
   if (!user) return;
+  if (ownOnly) return res.status(200).json({ user: meView(user) });
 
   if (req.method === 'GET' && req.query?.u) {
     const name = cleanUsername(req.query.u);
@@ -35,5 +38,5 @@ export default route(async (req, res) => {
     await saveUser(user);
   }
 
-  res.status(200).json({ user: fullProfile(user) });
+  res.status(200).json({ user: meView(user) });
 });

@@ -1,8 +1,8 @@
 import { cmd, pipeline, route, readBody } from './_store.js';
-import { requireUser, isStaff, userKey, cleanUsername, publicUser, saveUser, parseUser, userBanKeys } from './_auth.js';
+import { requireUser, isStaff, userKey, cleanUsername, publicUser, saveUser, parseUser, userBanKeys, statusOf } from './_auth.js';
 
 // GET  /api/admin  -> { users: [...], signupsOpen }
-// POST /api/admin  { action: "ban" | "unban" | "promote" | "demote", username, mode?: "normal" | "device" }
+// POST /api/admin  { action: "ban" | "unban" | "promote" | "demote" | "approve" | "deny", username, mode?: "normal" | "device" }
 //                  { action: "signups", open: true | false }
 // Owner: everything. Admins: ban/unban regular members, open/close sign-ups.
 export default route(async (req, res) => {
@@ -37,6 +37,7 @@ export default route(async (req, res) => {
         target.banned = b.action === 'ban';
         if (target.banned) {
           target.role = null;
+          await cmd('SREM', 'chat:pending', target.username);
           target.banType = 'normal';
           if (b.mode === 'device') {
             // Block every IP + device they've recently used, so new accounts from there are blocked too.
@@ -46,10 +47,15 @@ export default route(async (req, res) => {
             target.banType = 'device';
           }
         }
+      } else if (b.action === 'approve' || b.action === 'deny') {
+        target.status = b.action === 'approve' ? 'approved' : 'denied';
+        target.reviewedBy = me.username;
+        await cmd('SREM', 'chat:pending', target.username);
       } else if (b.action === 'promote' || b.action === 'demote') {
         if (me.role !== 'owner') return res.status(403).json({ error: 'Only the owner can change admins' });
         if (target.banned) return res.status(400).json({ error: 'Unban them first' });
         target.role = b.action === 'promote' ? 'admin' : null;
+        if (target.role) { target.status = 'approved'; await cmd('SREM', 'chat:pending', target.username); }
       } else {
         return res.status(400).json({ error: 'Unknown action' });
       }
@@ -62,7 +68,10 @@ export default route(async (req, res) => {
   const raws = unique.length ? (await pipeline([['MGET', ...unique.map(userKey)]]))[0] : [];
   const users = raws.filter(Boolean).map((r) => {
     const u = parseUser(r);
-    return { ...publicUser(u), banned: !!u.banned, banType: u.banned ? u.banType || 'normal' : null, created: u.created };
+    return {
+      ...publicUser(u), banned: !!u.banned, banType: u.banned ? u.banType || 'normal' : null, created: u.created,
+      status: statusOf(u), application: u.application || null,
+    };
   });
   res.status(200).json({ users, signupsOpen: signups !== 'closed' });
 });
