@@ -15,6 +15,16 @@ photo attachments (button, paste or drag-and-drop), channels, an online list, an
 - **See someone's profile:** click their name or picture on a message, or in the Online list. It shows their bio and when they joined.
 - The tab title and icon always say "Calculator".
 
+## Applications (who gets in)
+
+- After someone types the unlock code and makes an account, they have to fill out an application:
+  **Why do you want CalcTxt?**, **What will you use it for?**, and a required box agreeing **not to leak it to people who can't be trusted**.
+- Until an admin approves them, they can't see or do anything in the app (the server blocks it, not just the screen).
+  Their screen says "Application sent!" and lets them in by itself within ~15 seconds of being approved.
+- The owner and admins see a **red number** on the gold shield when applications are waiting. Open the Admin Panel to read
+  them and click **Approve** or **Deny**. Denied people see "Application denied". You can still approve them later from the member list.
+- Accounts made before this feature, the owner, and admins never have to apply.
+
 ## Moderation
 
 - **Set yourself as owner:** in Render → your service → **Environment**, add `OWNER_USERNAME` = your username
@@ -93,6 +103,7 @@ Open http://localhost:3000.
 | `api/img.js` | Serves uploaded photos |
 | `api/poll.js` | New messages, channels, who's online, profiles (polled every 2s) |
 | `api/send.js` | Posts a message |
+| `api/apply.js` | Sends a new account's application |
 | `api/servers.js` | Create / join / leave / delete servers, invites, kick & ban |
 | `api/_servers.js` | Server storage and who's in which server |
 | `api/channels.js` | Create / update / delete channels, manage members |

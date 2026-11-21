@@ -34,7 +34,24 @@
   .key.zero { grid-column: span 2; aspect-ratio: auto; border-radius: 999px; justify-content: flex-start; padding-left: 30px; }
 
   /* ================= AUTH ================= */
-  #auth { position: fixed; inset: 0; background: linear-gradient(135deg, #3b2f8f, #1e1f22 60%); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 60; }
+  div#gate { overflow-y: auto; align-items: flex-start; }
+  #gate .auth-card { margin: auto; }
+  textarea.apply-field { width: 100%; background: var(--bg-0); border: 0; border-radius: 4px; padding: 10px; color: var(--text); font: inherit; font-size: 15px; outline: 0; margin-bottom: 16px; resize: vertical; min-height: 70px; line-height: 1.4; }
+  .apply-check { display: flex; gap: 10px; align-items: flex-start; background: var(--bg-1); padding: 12px; border-radius: 6px; margin-bottom: 12px; font-size: 14px; color: var(--text); cursor: pointer; }
+  .apply-check input { width: 18px; height: 18px; margin-top: 1px; accent-color: var(--green); flex-shrink: 0; }
+  .gate-icon { font-size: 48px; text-align: center; margin-bottom: 8px; }
+  .rail-btn.admin { position: relative; }
+  .app-count { position: absolute; right: -4px; bottom: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--red); color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 3px solid var(--bg-0); box-sizing: content-box; }
+  .app-card { background: var(--bg-1); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+  .app-card .who { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .app-card .who b { color: var(--text-bright); }
+  .app-card .who small { color: var(--text-dim); display: block; font-size: 12px; }
+  .app-card .q { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-dim); margin-bottom: 2px; }
+  .app-card .a { font-size: 14px; color: var(--text); white-space: pre-wrap; word-wrap: break-word; margin-bottom: 8px; }
+  .app-card .btns { display: flex; gap: 8px; justify-content: flex-end; }
+  .badge.pending { background: #f0b232; color: #000; }
+  .badge.denied { background: #4e5058; }
+  #auth, #gate { position: fixed; inset: 0; background: linear-gradient(135deg, #3b2f8f, #1e1f22 60%); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 60; }
   .auth-card { background: var(--bg-2); border-radius: 8px; padding: 32px; width: 100%; max-width: 420px; box-shadow: 0 8px 32px rgba(0,0,0,.4); }
   .auth-card h2 { color: var(--text-bright); text-align: center; font-size: 24px; margin-bottom: 6px; }
   .auth-card > p { color: var(--text-dim); text-align: center; margin-bottom: 20px; font-size: 15px; }
@@ -308,6 +325,33 @@
   </form>
 </div>
 
+<!-- ================= APPLICATION (new accounts) ================= -->
+<div id="gate" class="hidden">
+  <form class="auth-card" id="applyForm">
+    <h2>Apply for CalcTxt</h2>
+    <p>Before you get in, tell us a bit about yourself. An admin will read this and approve you.</p>
+    <label class="lbl" for="applyWhy">Why do you want CalcTxt?</label>
+    <textarea class="field apply-field" id="applyWhy" maxlength="500" rows="3" required></textarea>
+    <label class="lbl" for="applyUse">What will you use it for?</label>
+    <textarea class="field apply-field" id="applyUse" maxlength="500" rows="3" required></textarea>
+    <label class="apply-check" for="applyAgree">
+      <input type="checkbox" id="applyAgree">
+      <span>I understand not to leak CalcTxt, the unlock code or the link to people who can't be trusted.</span>
+    </label>
+    <div class="err" id="applyErr"></div>
+    <button class="btn" type="submit" id="applySubmit">Send Application</button>
+    <button type="button" class="auth-lock gate-out">Log out</button>
+    <button type="button" class="auth-lock gate-lock">Back to calculator</button>
+  </form>
+  <div class="auth-card hidden" id="waitCard">
+    <div class="gate-icon" id="waitIcon">⏳</div>
+    <h2 id="waitTitle">Application sent!</h2>
+    <p id="waitText">An admin will review it soon. This page lets you in by itself as soon as you're approved.</p>
+    <button type="button" class="auth-lock gate-out">Log out</button>
+    <button type="button" class="auth-lock gate-lock">Back to calculator</button>
+  </div>
+</div>
+
 <!-- ================= CHAT APP ================= -->
 <div id="app" class="hidden">
   <div class="nav" id="nav">
@@ -318,6 +362,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M13 5h-2v6H5v2h6v6h2v-6h6v-2h-6z"/></svg>
       </button>
       <button class="rail-btn admin hidden" id="adminBtn" title="Admin panel">
+        <span class="app-count hidden" id="appCount"></span>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5zm-1 14-4-4 1.4-1.4L11 13.2l4.6-4.6L17 10z"/></svg>
       </button>
       <button class="rail-btn lock" id="lockBtn" title="Lock (Esc)">
@@ -480,7 +525,11 @@
   <div class="modal">
     <div class="modal-inner">
       <h2>Admin Panel</h2>
-      <p>Ban members, choose admins, and control sign-ups.</p>
+      <p>Review applications, ban members, choose admins, and control sign-ups.</p>
+      <div id="appsWrap" class="hidden">
+        <h3 class="sec" id="appsHead">Applications</h3>
+        <div id="appsList"></div>
+      </div>
       <label class="toggle-row" for="signupToggle">
         <span><b>Allow new sign-ups</b><small>Turn off to stop banned people making new accounts.</small></span>
         <input type="checkbox" id="signupToggle">
@@ -761,6 +810,13 @@
     const data = await r.json().catch(() => ({ error: 'Server returned an invalid response' }));
     if (r.status === 401 && token && path !== '/api/auth') { signedOut(); throw new Error('Logged out'); }
     if (data.banned && path !== '/api/auth') { signedOut(); $('authErr').textContent = data.error; throw new Error('Logged out'); }
+    if (data.pending && path !== '/api/auth') {
+      // not approved (yet): back to the application screen
+      stopPolling();
+      if (me) { me.status = data.status; me.applied = data.applied; }
+      if (unlocked) showGate();
+      throw new Error('Logged out');
+    }
     if (!r.ok || data.error) { const e = new Error(data.error || 'Request failed'); e.data = data; throw e; }
     return data;
   }
@@ -826,7 +882,7 @@
     if (!token) return showAuth('login');
     try {
       me = (await api('/api/me')).user;
-      if (unlocked) enterApp();
+      if (unlocked) routeIn();
     } catch (e) {
       if (!unlocked) return;
       if (!token) return; // signedOut() already showed the login screen
@@ -844,7 +900,75 @@
     del(k) { try { sessionStorage.removeItem(k); } catch {} },
   };
 
+  // Approved accounts go into the chat; new ones fill out the application first.
+  function routeIn() {
+    if (me && me.status && me.status !== 'approved') showGate();
+    else enterApp();
+  }
+
+  /* ---------- application screen ---------- */
+  let gateTimer = null;
+  function stopGateCheck() { clearInterval(gateTimer); gateTimer = null; }
+  function showGate() {
+    stopPolling();
+    $('auth').classList.add('hidden');
+    $('app').classList.add('hidden');
+    $('gate').classList.remove('hidden');
+    plainUrl();
+    session.del('calc.open');
+    const denied = me?.status === 'denied';
+    const waiting = denied || me?.applied;
+    $('applyForm').classList.toggle('hidden', !!waiting);
+    $('waitCard').classList.toggle('hidden', !waiting);
+    $('waitIcon').textContent = denied ? '🚫' : '⏳';
+    $('waitTitle').textContent = denied ? 'Application denied' : 'Application sent!';
+    $('waitText').textContent = denied
+      ? "Sorry, an admin didn't approve your application."
+      : "An admin will review it soon. This page lets you in by itself as soon as you're approved.";
+    $('applyErr').textContent = '';
+    stopGateCheck();
+    if (waiting && !denied) gateTimer = setInterval(checkApproval, 15000);
+    if (!waiting) setTimeout(() => $('applyWhy').focus(), 50);
+  }
+  function hideGate() { stopGateCheck(); $('gate').classList.add('hidden'); }
+  async function checkApproval() {
+    if (!unlocked || !token || document.hidden) return;
+    try {
+      me = (await api('/api/me')).user;
+      if (me.status === 'approved') { hideGate(); enterApp(); }
+      else if (me.status === 'denied') showGate();
+    } catch {}
+  }
+  $('applyForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('applyErr').textContent = '';
+    if (!$('applyAgree').checked) { $('applyErr').textContent = "Please tick the box to agree not to leak CalcTxt."; return; }
+    $('applySubmit').disabled = true;
+    try {
+      const data = await api('/api/apply', {
+        method: 'POST',
+        body: { why: $('applyWhy').value, use: $('applyUse').value, understand: true },
+      });
+      me = data.user;
+      $('applyWhy').value = ''; $('applyUse').value = ''; $('applyAgree').checked = false;
+      routeIn();
+    } catch (err) {
+      if (err.message !== 'Logged out') $('applyErr').textContent = err.message;
+    } finally {
+      $('applySubmit').disabled = false;
+    }
+  });
+  document.querySelectorAll('.gate-lock').forEach((b) => { b.onclick = () => lock(); });
+  document.querySelectorAll('.gate-out').forEach((b) => {
+    b.onclick = async () => {
+      try { await api('/api/auth', { method: 'POST', body: { action: 'logout' } }); } catch {}
+      hideGate();
+      signedOut();
+    };
+  });
+
   function enterApp() {
+    hideGate();
     $('auth').classList.add('hidden');
     $('app').classList.remove('hidden');
     session.set('calc.open', '1');
@@ -855,6 +979,7 @@
     unlocked = false;
     session.del('calc.open');
     plainUrl();
+    hideGate();
     stopPolling();
     $('messages').innerHTML = '';
     $('memberList').innerHTML = '';
@@ -907,6 +1032,7 @@
     $('authSwitch').querySelector('button').onclick = () => showAuth(reg ? 'login' : 'register');
     $('authErr').textContent = '';
     $('app').classList.add('hidden');
+    hideGate();
     $('auth').classList.remove('hidden');
     plainUrl();
     setTimeout(() => $('authUser').focus(), 50);
@@ -924,7 +1050,7 @@
       token = data.token; store.set('calc.t', token);
       me = data.user;
       $('authPass').value = '';
-      if (unlocked) enterApp();
+      if (unlocked) routeIn();
     } catch (err) {
       $('authErr').textContent = err.message;
     } finally {
@@ -1134,6 +1260,7 @@
       if (Date.now() > bannerUntil) showBanner('');
       if (!unlocked || forServer !== server) return;
       if (data.servers) { railAt = Date.now(); setServers(data.servers); }
+      if (data.pendingApps !== undefined) setAppCount(data.pendingApps);
       if (data.server && JSON.stringify(data.server) !== JSON.stringify(serverMeta)) {
         serverMeta = data.server;
         const i = servers.findIndex((s) => s.id === serverMeta.id);
@@ -1317,8 +1444,44 @@
     renderAdmin();
   }
 
+  function setAppCount(n) {
+    $('appCount').textContent = n > 99 ? '99+' : String(n || '');
+    $('appCount').classList.toggle('hidden', !n);
+  }
+
+  function renderApps() {
+    const apps = adminData.users
+      .filter((u) => u.status === 'pending' && u.application && !u.banned)
+      .sort((a, b) => a.application.ts - b.application.ts);
+    setAppCount(apps.length);
+    $('appsWrap').classList.toggle('hidden', !apps.length);
+    $('appsHead').textContent = `Applications — ${apps.length}`;
+    const list = $('appsList');
+    list.innerHTML = '';
+    for (const u of apps) {
+      const card = document.createElement('div');
+      card.className = 'app-card';
+      card.innerHTML = `<div class="who"><div class="avatar sm"></div><div><b></b><small></small></div></div>
+        <div class="q">Why do you want CalcTxt?</div><div class="a" data-k="why"></div>
+        <div class="q">What will you use it for?</div><div class="a" data-k="use"></div>
+        <div class="q">Agreed not to leak it</div><div class="a">✅ Yes</div>
+        <div class="btns"></div>`;
+      setAvatar(card.querySelector('.avatar'), u);
+      card.querySelector('b').textContent = u.displayName;
+      card.querySelector('small').textContent = `@${u.username} · applied ${new Date(u.application.ts).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`;
+      card.querySelector('[data-k="why"]').textContent = u.application.why;
+      card.querySelector('[data-k="use"]').textContent = u.application.use;
+      const btns = card.querySelector('.btns');
+      const mk = (label, cls, fn) => { const b = document.createElement('button'); b.className = 'mini ' + cls; b.textContent = label; b.onclick = fn; btns.appendChild(b); };
+      mk('Deny', 'red', () => { if (confirm(`Deny ${u.displayName} (@${u.username})?`)) adminCall({ action: 'deny', username: u.username }); });
+      mk('Approve', 'green', () => adminCall({ action: 'approve', username: u.username }));
+      list.appendChild(card);
+    }
+  }
+
   function renderAdmin() {
     if (!adminData) return;
+    renderApps();
     $('signupToggle').checked = adminData.signupsOpen;
     const q = $('userSearch').value.trim().toLowerCase();
     const rank = (u) => (u.banned ? 3 : u.role === 'owner' ? 0 : u.role === 'admin' ? 1 : 2);
@@ -1340,6 +1503,11 @@
         if (u.banType === 'device') { bb.className = 'badge ipban'; bb.textContent = 'IP banned'; }
         row.querySelector('.top').appendChild(bb);
       }
+      if (!u.banned && u.status !== 'approved') {
+        const sb = badgeEl(u.status);
+        if (u.status === 'pending' && !u.application) sb.textContent = 'no application yet';
+        row.querySelector('.top').appendChild(sb);
+      }
       row.querySelector('small').textContent = '@' + u.username + (u.username === me.username ? ' (you)' : '');
       const acts = row.querySelector('.acts');
       const btn = (label, cls, fn) => { const b = document.createElement('button'); b.className = 'mini ' + cls; b.textContent = label; b.onclick = fn; acts.appendChild(b); };
@@ -1348,6 +1516,7 @@
         if (u.role === 'admin') btn('Remove admin', '', () => adminCall({ action: 'demote', username: u.username }));
         else btn('Make admin', '', () => adminCall({ action: 'promote', username: u.username }));
       }
+      if (canTouch && !u.banned && u.status === 'denied') btn('Approve', 'green', () => adminCall({ action: 'approve', username: u.username }));
       if (canTouch && (u.role !== 'admin' || me.role === 'owner')) {
         if (u.banned) btn('Unban', 'green', () => adminCall({ action: 'unban', username: u.username }));
         else btn('Ban', 'red', () => openBan(u));
