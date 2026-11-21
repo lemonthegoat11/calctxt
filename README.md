@@ -33,9 +33,9 @@ photo attachments (button, paste or drag-and-drop), channels, an online list, an
 - The owner and admins get a gold shield button on the left. It opens the **Admin Panel**:
   - **Ban / Unban** anyone. Banned people are kicked out within seconds and can't log back in. When you ban, pick:
     - **Normal ban**: only that account.
-    - **IP + device ban**: also blocks the last 5 IPs and browsers they used, so they can't make new accounts or use
-      other ones from there. Anyone else on that Wi-Fi is blocked too (owner/admins never are). A VPN plus a different
-      browser gets around it; websites can't read real hardware IDs. Unban lifts it.
+    - **Device ban**: also blocks the last 5 browsers/devices they used, so they can't make new accounts or use
+      other ones from there. Other people on the same Wi-Fi aren't affected. IP addresses aren't used or stored.
+      Clearing browser data or switching browsers gets around it (websites can't read real hardware IDs). Unban lifts it.
   - **Make admin / Remove admin** (owner only). Admins can ban regular members; only the owner can ban admins. Nobody can ban the owner.
   - **Allow new sign-ups** switch: turn it off so banned people can't just make a new account.
 - Click someone's name, then **Admin Panel** on their profile, to jump to them in the Admin Panel.

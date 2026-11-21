@@ -667,7 +667,7 @@
         <input type="radio" name="banMode" id="banNormal" value="normal" checked>
       </label>
       <label class="toggle-row ban-opt" for="banDevice">
-        <span><b>IP + device ban</b><small>Also blocks their network and browser, so they can't make a new account or log in to any other one. Anyone else on the same Wi-Fi gets blocked too (admins are never blocked).</small></span>
+        <span><b>Device ban</b><small>Also blocks the browsers/devices they've used, so they can't make a new account or log in to another one from there. Other people on the same Wi-Fi aren't affected.</small></span>
         <input type="radio" name="banMode" id="banDevice" value="device">
       </label>
     </div>
@@ -1500,7 +1500,7 @@
       if (u.role) row.querySelector('.top').appendChild(badgeEl(u.role));
       if (u.banned) {
         const bb = badgeEl('banned');
-        if (u.banType === 'device') { bb.className = 'badge ipban'; bb.textContent = 'IP banned'; }
+        if (u.banType === 'device') { bb.className = 'badge ipban'; bb.textContent = 'device banned'; }
         row.querySelector('.top').appendChild(bb);
       }
       if (!u.banned && u.status !== 'approved') {
